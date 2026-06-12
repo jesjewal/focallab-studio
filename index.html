@@ -106,9 +106,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .flow .stats{flex:1 1 248px;min-width:240px}
 .frame{background:#04060a;border:1px solid var(--line);border-radius:14px;padding:8px;width:fit-content;max-width:100%;margin:0 auto;flex:0 0 auto}
 canvas#vf{display:block;width:auto;height:auto;border-radius:8px}
-body.vf-s canvas#vf{max-width:44vw;max-width:50cqw;max-height:38vh}
-body.vf-m canvas#vf{max-width:64vw;max-width:75cqw;max-height:58vh}
-body.vf-l canvas#vf{max-width:92vw;max-width:97cqw;max-height:84vh}
+/* window-tracking caps: shrinking the window never grows the frame;
+   the px floor keeps phones usable; cqw keeps it inside the column */
+body.vf-s canvas#vf{max-width:max(28vw,240px);max-width:min(50cqw,max(28vw,240px));max-height:38vh}
+body.vf-m canvas#vf{max-width:max(42vw,300px);max-width:min(75cqw,max(42vw,300px));max-height:58vh}
+body.vf-l canvas#vf{max-width:max(54vw,340px);max-width:min(97cqw,max(54vw,340px));max-height:84vh}
 #stage > * + *{margin-top:10px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:8px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:8px 11px}
