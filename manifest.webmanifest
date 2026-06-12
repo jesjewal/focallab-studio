@@ -1,0 +1,14 @@
+{
+  "name": "FocalLab Studio",
+  "short_name": "FocalLab",
+  "description": "Depth of field & lighting pre-visualization studio for photo and cinema.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0f14",
+  "theme_color": "#0b0f14",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
