@@ -102,7 +102,9 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 #ovh{margin-top:4px}
 #ovh svg{display:block;width:100%;height:auto;touch-action:none;border-radius:12px;background:var(--panel-2);border:1px solid var(--line-2)}
 #stage{container-type:inline-size}
-.frame{background:#04060a;border:1px solid var(--line);border-radius:14px;padding:8px;width:fit-content;max-width:100%;margin:0 auto}
+.flow{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center}
+.flow .stats{flex:1 1 248px;min-width:240px}
+.frame{background:#04060a;border:1px solid var(--line);border-radius:14px;padding:8px;width:fit-content;max-width:100%;margin:0 auto;flex:0 0 auto}
 canvas#vf{display:block;width:auto;height:auto;border-radius:8px}
 body.vf-s canvas#vf{max-width:44vw;max-width:50cqw;max-height:38vh}
 body.vf-m canvas#vf{max-width:64vw;max-width:75cqw;max-height:58vh}
@@ -280,17 +282,19 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
     <div class="vfbar">
       <span class="hint">Viewfinder size</span>
       <div class="seg mini" id="vfSeg">
-        <button data-v="s" class="on">S</button>
+        <button data-v="s" title="Small — stats flow up beside the frame">S</button>
         <button data-v="m">M</button>
-        <button data-v="l" title="Large — pushes the panels below the fold">L</button>
+        <button data-v="l" class="on" title="Large — pushes the panels below the fold">L</button>
       </div>
     </div>
-    <div class="frame"><canvas id="vf" width="1320" height="880"></canvas></div>
+    <div class="flow">
+      <div class="frame"><canvas id="vf" width="1320" height="880"></canvas></div>
+      <div class="stats" id="stats"></div>
+    </div>
     <div class="card" id="topview">
       <h2>Top view — focus plane &amp; depth of field</h2>
       <div id="tvWrap"></div>
     </div>
-    <div class="stats" id="stats"></div>
     <details class="about">
       <summary>About the math</summary>
       <div class="body">
@@ -1450,7 +1454,7 @@ function applyVfSize(v,save){
   if(save){ try{ localStorage.setItem('focallab.vfsize',v); }catch(e){} }
 }
 $('#vfSeg').addEventListener('click',e=>{const b=e.target.closest('button'); if(b) applyVfSize(b.dataset.v,true);});
-let vf0='s'; try{ vf0=localStorage.getItem('focallab.vfsize')||'s'; }catch(e){}
+let vf0='l'; try{ vf0=localStorage.getItem('focallab.vfsize')||'l'; }catch(e){}
 applyVfSize(vf0,false);
 
 // ---------- units ----------
