@@ -3,3 +3,6 @@
 .Spotlight-V100
 .Trashes
 .claude/
+
+# Local Netlify folder
+.netlify
