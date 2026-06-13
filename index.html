@@ -289,8 +289,8 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
       <span class="hint">Viewfinder size</span>
       <div class="seg mini" id="vfSeg">
         <button data-v="s" title="Small — stats flow up beside the frame">S</button>
-        <button data-v="m">M</button>
-        <button data-v="l" class="on" title="Large — pushes the panels below the fold">L</button>
+        <button data-v="m" class="on">M</button>
+        <button data-v="l" title="Large — pushes the panels below the fold">L</button>
       </div>
     </div>
     <div class="flow">
@@ -1460,7 +1460,7 @@ function applyVfSize(v,save){
   if(save){ try{ localStorage.setItem('focallab.vfsize',v); }catch(e){} }
 }
 $('#vfSeg').addEventListener('click',e=>{const b=e.target.closest('button'); if(b) applyVfSize(b.dataset.v,true);});
-let vf0='l'; try{ vf0=localStorage.getItem('focallab.vfsize')||'l'; }catch(e){}
+let vf0='m'; try{ vf0=localStorage.getItem('focallab.vfsize')||'m'; }catch(e){}
 applyVfSize(vf0,false);
 
 // ---------- units ----------
