@@ -99,6 +99,13 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .lrow input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;flex:none}
 .lrow input[type=range]{flex:1;height:18px}
 .lrow input[type=range]::-webkit-slider-thumb{width:13px;height:13px;margin-top:-4px}
+.prow{background:var(--panel-2);border:1px solid var(--line-2);border-radius:9px;padding:7px 8px;margin-bottom:6px}
+.prow .ptype{flex:1.3}.prow .pskin{flex:1}
+.prow .swatch{width:15px;height:15px;border-radius:50%;border:1px solid var(--line-2);flex:none}
+.prow .pdel{background:none;border:0;color:var(--faint);cursor:pointer;font-size:13px;padding:0 2px}
+.prow .pdel:hover{color:var(--hot)}
+.prow .ppos{flex:1;height:18px}
+.prow .ppos::-webkit-slider-thumb{width:13px;height:13px;margin-top:-4px}
 #ovh{margin-top:4px}
 #ovh svg{display:block;width:100%;height:auto;touch-action:none;border-radius:12px;background:var(--panel-2);border:1px solid var(--line-2)}
 #stage{container-type:inline-size}
@@ -245,11 +252,9 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
     <div class="card">
       <h2>Scene</h2>
       <div class="ctl">
-        <div class="row"><label for="subj">Subject</label></div>
-        <select id="subj" aria-label="Subject"></select>
-        <div id="groupCtl" style="display:none;margin-top:8px">
-          <div class="chips" id="groupSlots"></div>
-        </div>
+        <div class="row"><label>People</label><span class="val" id="peopleCount"></span></div>
+        <div id="peopleList"></div>
+        <div class="chips" style="margin-top:2px"><button id="addPerson">＋ Add person</button></div>
       </div>
       <div class="ctl">
         <div class="row"><label for="scene">Location</label></div>
@@ -257,7 +262,6 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
       </div>
       <div class="ctl">
         <div class="chips">
-          <button id="flipBtn" title="Mirror the subject left/right">⇄ Flip</button>
           <button id="bgUp">Upload backdrop…</button>
           <button id="bgClear" style="display:none">✕ Clear</button>
         </div>
@@ -273,15 +277,9 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
           <input type="range" id="bgd" min="0" max="1000" step="1" aria-label="Distance to background">
         </div>
       </div>
-      <div class="duo">
-        <div class="ctl">
-          <div class="row"><label for="hgt">Height</label><span class="val" id="hgtV"></span></div>
-          <input type="range" id="hgt" min="140" max="210" step="1" aria-label="Subject height">
-        </div>
-        <div class="ctl">
-          <div class="row"><label for="plc">Placement</label><span class="val" id="plcV"></span></div>
-          <input type="range" id="plc" min="-100" max="100" step="1" aria-label="Subject placement left to right">
-        </div>
+      <div class="ctl">
+        <div class="row"><label for="hgt">Subject height</label><span class="val" id="hgtV"></span></div>
+        <input type="range" id="hgt" min="140" max="210" step="1" aria-label="Subject height">
       </div>
     </div>
 
@@ -421,8 +419,8 @@ const ASPECTS=[
 // ---------- state ----------
 const F_STOPS=[0.95,1.0,1.1,1.2,1.4,1.6,1.8,2,2.2,2.5,2.8,3.2,3.5,4,4.5,5,5.6,6.3,7.1,8,9,10,11,13,14,16,18,20,22,25,29,32];
 const state={mode:'photo', cam:'ff', o:'l', ar:'2.39', f:85, N:1.8, s:2.5, b:18, hp:1.75,
-  px:0, fl:false,
-  subj:'woman', group:['man','woman'], scene:'city', lights:true, grid:false, hud:true,
+  people:[{t:'woman',skin:'medium',x:0,c:'#3f6fa6',hair:'#241a12'}],
+  scene:'city', lights:true, grid:false, hud:true,
   ls:'none',
   lt:{key: {on:false, phi:-40, d:1.8, i:75, t:'w'},
       fill:{on:false, phi:50,  d:2.2, i:35, t:'n'},
@@ -872,24 +870,18 @@ function drawScene(res){
     }
   }
 
-  // subject plane (placement slides the subject across the frame)
+  // subject plane — a roster of people, each at its own horizontal position
   const ppmS=ppm(state.s), fy=groundY(state.s), hpx=state.hp*ppmS;
-  const cxS=W/2+state.px*0.42*W;
   if(!customBgImg&&state.scene==='stadium'){
     ctx.strokeStyle='rgba(210,230,215,.28)'; ctx.lineWidth=Math.max(0.06*ppmS,1);
-    ctx.beginPath(); ctx.ellipse(cxS,fy,3.4*ppmS,0.17*ppmS,0,0,7); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(W/2,fy,3.4*ppmS,0.17*ppmS,0,0,7); ctx.stroke();
   }
-  const sub=currentSubject();
-  const key=state.lt.key, kRad=key.phi*Math.PI/180;
-  const shOff=key.on?Math.sin(kRad)*Math.max(0,Math.cos(kRad))*-0.3*hpx:0;
-  ctx.fillStyle='rgba(0,0,0,.4)';
-  ctx.beginPath(); ctx.ellipse(cxS+shOff,Math.min(fy,H+hpx),hpx*(sub.shadowW||0.22),hpx*0.032,0,0,7); ctx.fill();
-  drawSubject(cxS,fy,hpx,sub,state.fl);
+  const af=drawPeople(W,H,fy,hpx);
 
   // HUD
   vignette(W,H);
   if(state.grid) drawGrid(W,H);
-  if(state.hud) drawHud(res,W,H,fy,hpx,sub,cxS);
+  if(state.hud) drawHud(res,W,H,af);
 }
 
 function drawLight(x,y,physPx,disc,color){
@@ -902,8 +894,10 @@ function drawLight(x,y,physPx,disc,color){
 }
 
 // ---------- subjects (capsule-stroke silhouettes; figure space: x right, y 0=feet → 1=head top) ----------
+// figures: 'cloth' parts use clothing colour, head/hands/neck use skin, hair uses hair colour
 function figMan(s){
-  s.ell(-0.05,0.022,0.052,0.024); s.ell(0.095,0.022,0.052,0.024);
+  s.cloth();
+  s.ell(-0.05,0.022,0.052,0.024); s.ell(0.095,0.022,0.052,0.024);   // shoes
   s.seg(-0.045,0.50,-0.052,0.27,0.088); s.seg(-0.052,0.27,-0.05,0.04,0.064);
   s.seg(0.045,0.50,0.075,0.27,0.088);  s.seg(0.075,0.27,0.095,0.04,0.064);
   s.seg(0,0.52,0,0.61,0.205);
@@ -911,87 +905,124 @@ function figMan(s){
   s.seg(-0.103,0.782,0.103,0.782,0.075);
   s.seg(-0.118,0.772,-0.136,0.615,0.057); s.seg(-0.136,0.615,-0.118,0.452,0.045);
   s.seg(0.118,0.772,0.143,0.612,0.057);  s.seg(0.143,0.612,0.158,0.455,0.045);
-  s.dot(-0.116,0.432,0.03); s.dot(0.161,0.436,0.03);
-  s.seg(0,0.80,0,0.845,0.056);
-  s.ell(0,0.916,0.064,0.078);
+  s.skin(); s.dot(-0.116,0.432,0.03); s.dot(0.161,0.436,0.03);      // hands
+  s.seg(0,0.80,0,0.845,0.056);                                       // neck
+  s.head(0,0.916,0.064,0.078,'short');
 }
 function figWoman(s){
-  s.ell(-0.038,0.022,0.046,0.022); s.ell(0.072,0.022,0.046,0.022);
-  s.seg(-0.034,0.34,-0.038,0.04,0.052); s.seg(0.048,0.34,0.06,0.04,0.052);
-  s.dress(0.64,0.30,0.066,0.14);
+  s.cloth();
+  s.ell(-0.038,0.022,0.046,0.022); s.ell(0.072,0.022,0.046,0.022);  // shoes
+  s.skin(); s.seg(-0.034,0.34,-0.038,0.04,0.052); s.seg(0.048,0.34,0.06,0.04,0.052); // bare lower legs
+  s.cloth(); s.dress(0.64,0.30,0.066,0.14);
   s.seg(0,0.60,0,0.775,0.13);
   s.seg(-0.082,0.78,0.082,0.78,0.062);
   s.seg(-0.094,0.772,-0.11,0.612,0.047); s.seg(-0.11,0.612,-0.092,0.46,0.038);
   s.seg(0.094,0.772,0.112,0.612,0.047);  s.seg(0.112,0.612,0.124,0.465,0.038);
-  s.dot(-0.09,0.442,0.025); s.dot(0.127,0.447,0.025);
-  s.seg(0,0.80,0,0.842,0.05);
-  s.ell(0,0.916,0.060,0.075);
-  s.seg(-0.030,0.945,-0.066,0.82,0.05); s.dot(-0.069,0.808,0.027);
+  s.skin(); s.dot(-0.09,0.442,0.025); s.dot(0.127,0.447,0.025);     // hands
+  s.seg(0,0.80,0,0.842,0.05);                                        // neck
+  s.head(0,0.916,0.060,0.075,'long');
+  s.hair(); s.seg(-0.030,0.945,-0.066,0.82,0.05); s.dot(-0.069,0.808,0.027); // hair strand
 }
 function figChild(s){
-  s.ell(-0.045,0.025,0.05,0.026); s.ell(0.08,0.025,0.05,0.026);
+  s.cloth();
+  s.ell(-0.045,0.025,0.05,0.026); s.ell(0.08,0.025,0.05,0.026);     // shoes
   s.seg(-0.04,0.48,-0.045,0.05,0.075); s.seg(0.045,0.48,0.068,0.05,0.075);
   s.seg(0,0.50,0,0.60,0.21);
   s.seg(0,0.58,0,0.74,0.175);
   s.seg(-0.088,0.745,0.088,0.745,0.08);
-  s.seg(-0.10,0.735,-0.165,0.83,0.05); s.dot(-0.175,0.845,0.028);
-  s.seg(0.10,0.735,0.165,0.83,0.05);  s.dot(0.175,0.845,0.028);
-  s.seg(0,0.77,0,0.81,0.06);
-  s.ell(0,0.885,0.082,0.092);
+  s.seg(-0.10,0.735,-0.165,0.83,0.05); s.seg(0.10,0.735,0.165,0.83,0.05);
+  s.skin(); s.dot(-0.175,0.845,0.028); s.dot(0.175,0.845,0.028);    // hands
+  s.seg(0,0.77,0,0.81,0.06);                                         // neck
+  s.head(0,0.885,0.082,0.092,'short');
 }
 function figRunner(s){
+  s.cloth();
   s.seg(0,0.50,0.10,0.77,0.16);
   s.seg(0.02,0.51,0.16,0.30,0.085);  s.seg(0.16,0.30,0.13,0.06,0.062);  s.ell(0.16,0.045,0.05,0.024);
   s.seg(-0.02,0.50,-0.13,0.33,0.085); s.seg(-0.13,0.33,-0.24,0.17,0.062); s.ell(-0.26,0.16,0.048,0.024);
-  s.seg(0.045,0.755,0.15,0.64,0.052); s.seg(0.15,0.64,0.235,0.71,0.042);  s.dot(0.245,0.72,0.027);
-  s.seg(0.065,0.74,-0.035,0.62,0.052); s.seg(-0.035,0.62,-0.10,0.50,0.042); s.dot(-0.107,0.49,0.027);
+  s.seg(0.045,0.755,0.15,0.64,0.052); s.seg(0.15,0.64,0.235,0.71,0.042);
+  s.seg(0.065,0.74,-0.035,0.62,0.052); s.seg(-0.035,0.62,-0.10,0.50,0.042);
+  s.skin(); s.dot(0.245,0.72,0.027); s.dot(-0.107,0.49,0.027);
   s.seg(0.085,0.785,0.115,0.835,0.055);
-  s.ell(0.135,0.895,0.062,0.075);
+  s.head(0.135,0.895,0.062,0.075,'short');
 }
 function figSoccer(s){
+  s.cloth();
   s.seg(-0.02,0.50,-0.03,0.27,0.088); s.seg(-0.03,0.27,-0.04,0.04,0.064); s.ell(-0.045,0.022,0.052,0.024);
   s.seg(0.02,0.51,0.14,0.36,0.085);   s.seg(0.14,0.36,0.225,0.20,0.062);  s.ell(0.25,0.175,0.05,0.026);
-  s.dot(0.345,0.10,0.062);
+  s.col('#eef0f3'); s.dot(0.345,0.10,0.062); s.col('#2a2f37'); s.dot(0.345,0.10,0.028); // ball
+  s.cloth();
   s.seg(0,0.52,-0.03,0.775,0.16);
-  s.seg(-0.115,0.77,-0.20,0.66,0.052); s.seg(-0.20,0.66,-0.255,0.545,0.042); s.dot(-0.262,0.535,0.027);
-  s.seg(0.06,0.775,0.155,0.70,0.052);  s.seg(0.155,0.70,0.235,0.635,0.042);  s.dot(0.243,0.628,0.027);
+  s.seg(-0.115,0.77,-0.20,0.66,0.052); s.seg(-0.20,0.66,-0.255,0.545,0.042);
+  s.seg(0.06,0.775,0.155,0.70,0.052);  s.seg(0.155,0.70,0.235,0.635,0.042);
+  s.skin(); s.dot(-0.262,0.535,0.027); s.dot(0.243,0.628,0.027);
   s.seg(-0.025,0.79,-0.035,0.84,0.055);
-  s.ell(-0.04,0.905,0.063,0.077);
-}
-const FIGFN={man:figMan, woman:figWoman, child:figChild};
-const SUBJECTS={
-  woman: {name:'Woman',         af:{x:0,    y:0.916,s:0.20},  parts:[{fig:figWoman,dx:0,scale:1}]},
-  man:   {name:'Man',           af:{x:0,    y:0.916,s:0.20},  parts:[{fig:figMan,dx:0,scale:1}]},
-  couple:{name:'Couple', af:{x:-0.22,y:0.916,s:0.20}, shadowW:0.42,
-          parts:[{fig:figMan,dx:-0.22,scale:1},{fig:figWoman,dx:0.22,scale:0.95}]},
-  family:{name:'Family of three', af:{x:0.005,y:0.487,s:0.12}, shadowW:0.55,
-          parts:[{fig:figMan,dx:-0.24,scale:1},{fig:figWoman,dx:0.24,scale:0.94},{fig:figChild,dx:0.005,scale:0.55}]},
-  group: {name:'Build a group…', dynamic:true},
-  runner:{name:'Runner (sports)', af:{x:0.135,y:0.895,s:0.18}, shadowW:0.30, parts:[{fig:figRunner,dx:0,scale:1}]},
-  soccer:{name:'Soccer player (sports)', af:{x:-0.04,y:0.905,s:0.18}, shadowW:0.34, parts:[{fig:figSoccer,dx:0,scale:1}]},
-};
-// build the parts/af for an arbitrary line-up of up to 4 (man/woman/child)
-function groupLayout(arr){
-  const a=(arr||[]).filter(t=>FIGFN[t]); if(!a.length) a.push('woman');
-  const n=a.length, gap=n<=2?0.46:(n===3?0.42:0.36), span=(n-1)*gap;
-  const parts=a.map((t,i)=>({fig:FIGFN[t], dx:i*gap-span/2, scale:t==='child'?0.56:(t==='man'?1:0.95)}));
-  const focusIdx=Math.max(0,a.findIndex(t=>t!=='child')); // focus the first adult, else first
-  const tgt=parts[focusIdx];
-  return {parts, af:{x:tgt.dx, y:tgt.scale*0.916, s:tgt.scale*0.20}, shadowW:0.16+0.13*n};
-}
-function currentSubject(){
-  if(state.subj==='group') return groupLayout(state.group);
-  return SUBJECTS[state.subj]||SUBJECTS.woman;
+  s.head(-0.04,0.905,0.063,0.077,'short');
 }
 const TEMPS={w:'255,205,150', n:'242,244,248', c:'200,222,255'};
-function drawSubject(cx,fy,h,sub,flip){
+// ---- people roster: each person has a type, skin tone, and horizontal position ----
+const PTYPES=[{id:'woman',name:'Woman'},{id:'man',name:'Man'},{id:'child',name:'Child'},{id:'runner',name:'Runner'},{id:'soccer',name:'Soccer player'}];
+const SKINS=[
+  {id:'light', name:'Light',  c:'#f1c9a5'},
+  {id:'fair',  name:'Fair',   c:'#e3ad82'},
+  {id:'medium',name:'Medium', c:'#c88a5b'},
+  {id:'tan',   name:'Tan',    c:'#a96a40'},
+  {id:'brown', name:'Brown',  c:'#7d4c2b'},
+  {id:'deep',  name:'Deep',   c:'#512f18'},
+];
+const CLOTHES=['#3f6fa6','#a23b4b','#3f7d5a','#6a4d8f','#b9772e','#41757e','#8a4f8c','#4a525e'];
+const HAIRS=['#241a12','#100e0c','#5a3c22','#7a5634','#9aa0a6'];
+const TYPEFIG={man:figMan,woman:figWoman,child:figChild,runner:figRunner,soccer:figSoccer};
+const TYPESCALE={man:1,woman:0.96,child:0.56,runner:1,soccer:1};
+const TYPEAFY={man:0.916,woman:0.916,child:0.885,runner:0.895,soccer:0.905};
+const TYPEAFX={man:0,woman:0,child:0,runner:0.135,soccer:-0.04};
+function skinC(id){const s=SKINS.find(x=>x.id===id);return s?s.c:SKINS[2].c;}
+function normPeople(arr){
+  const a=(arr&&arr.length?arr:[{t:'woman'}]).slice(0,4);
+  return a.map((p,i)=>({
+    t:PTYPES.some(x=>x.id===p.t)?p.t:'woman',
+    skin:SKINS.some(x=>x.id===p.skin)?p.skin:SKINS[i%SKINS.length].id,
+    x:Math.max(-1,Math.min(1,isFinite(+p.x)?+p.x:0)),
+    c:p.c||CLOTHES[i%CLOTHES.length],
+    hair:p.hair||HAIRS[i%HAIRS.length]
+  }));
+}
+function ensurePeople(st){
+  if(Array.isArray(st.people)&&st.people.length){ st.people=normPeople(st.people); return; }
+  const map={woman:[{t:'woman'}],man:[{t:'man'}],
+    couple:[{t:'man',x:-0.22},{t:'woman',x:0.22}],
+    family:[{t:'man',x:-0.24},{t:'woman',x:0.24},{t:'child',x:0}],
+    runner:[{t:'runner'}],soccer:[{t:'soccer'}]};
+  let arr;
+  if(st.subj==='group'&&Array.isArray(st.group)) arr=st.group.map(t=>({t}));
+  else arr=map[st.subj]||[{t:'woman'}];
+  st.people=normPeople(arr);
+}
+function addPerson(){
+  if(state.people.length>=4) return;
+  const i=state.people.length, defX=[0,0.24,-0.24,0.42][i]||0;
+  state.people.push({t:'woman',skin:SKINS[i%SKINS.length].id,x:defX,c:CLOTHES[i%CLOTHES.length],hair:HAIRS[i%HAIRS.length]});
+}
+function drawPeople(W,H,fy,hpx){
+  const people=state.people.length?state.people:[{t:'woman',skin:'medium',x:0,c:CLOTHES[0],hair:HAIRS[0]}];
+  const px=p=>W/2+(p.x||0)*0.42*W;
+  // ground shadows (under everyone), offset opposite the key
+  const key=state.lt.key, kRad=key.phi*Math.PI/180;
+  const shoff=key.on?Math.sin(kRad)*Math.max(0,Math.cos(kRad))*-0.3:0;
+  for(const p of people){
+    const sc=TYPESCALE[p.t]||1, hh=hpx*sc;
+    ctx.fillStyle='rgba(0,0,0,.38)';
+    ctx.beginPath(); ctx.ellipse(px(p)+shoff*hh,Math.min(fy,H+hh),hh*0.20,hh*0.03,0,0,7); ctx.fill();
+  }
+  // figures onto the offscreen layer
   const pc=pcan.getContext('2d');
-  pc.clearRect(0,0,pcan.width,pcan.height);
-  const BODY='#0c1017', m=flip?-1:1;
-  pc.fillStyle=BODY; pc.strokeStyle=BODY; pc.lineCap='round';
-  for(const part of sub.parts){
-    const hh=h*part.scale, ox=cx+part.dx*h*m;
-    const X=x=>ox+x*hh*m, Y=y=>fy-y*hh;
+  pc.clearRect(0,0,pcan.width,pcan.height); pc.lineCap='round';
+  let minX=1e9,maxX=-1e9;
+  for(const p of people){
+    const sc=TYPESCALE[p.t]||1, hh=hpx*sc, ox=px(p);
+    const X=x=>ox+x*hh, Y=y=>fy-y*hh;
+    const skinCol=skinC(p.skin), clothCol=p.c||CLOTHES[0], hairCol=p.hair||HAIRS[0];
+    const set=c=>{pc.fillStyle=c;pc.strokeStyle=c;};
     const s={
       seg:(x1,y1,x2,y2,w)=>{pc.beginPath();pc.moveTo(X(x1),Y(y1));pc.lineTo(X(x2),Y(y2));pc.lineWidth=w*hh;pc.stroke();},
       ell:(x,y,rx,ry)=>{pc.beginPath();pc.ellipse(X(x),Y(y),rx*hh,ry*hh,0,0,7);pc.fill();},
@@ -1003,63 +1034,65 @@ function drawSubject(cx,fy,h,sub,flip){
         pc.bezierCurveTo(X(wHem-0.012),Y(hem+0.10),X(wTop+0.04),Y(top-0.14),X(wTop),Y(top));
         pc.closePath(); pc.fill();
       },
+      col:set, cloth:()=>set(clothCol), skin:()=>set(skinCol), hair:()=>set(hairCol),
+      head:(x,y,rx,ry)=>{
+        pc.fillStyle=hairCol; pc.beginPath(); pc.ellipse(X(x),Y(y+0.002),rx*1.08*hh,ry*1.06*hh,0,0,7); pc.fill();
+        pc.fillStyle=skinCol; pc.beginPath(); pc.ellipse(X(x),Y(y-ry*0.16),rx*0.9*hh,ry*0.9*hh,0,0,7); pc.fill();
+        set(skinCol);
+      },
     };
-    part.fig(s);
+    (TYPEFIG[p.t]||figWoman)(s);
+    minX=Math.min(minX,ox-0.34*hh); maxX=Math.max(maxX,ox+0.34*hh);
   }
-  // group extents (flip-aware) for the edge lighting
-  let maxX=Math.max(...sub.parts.map(p=>p.dx+0.32*p.scale));
-  let minX=Math.min(...sub.parts.map(p=>p.dx-0.32*p.scale));
-  if(flip){ const t=maxX; maxX=-minX; minX=-t; }
+  // lighting / ambient shading over all figures
   pc.globalCompositeOperation='source-atop';
   const anyLight=['key','fill','rim'].some(k=>state.lt[k].on);
+  const gMid=(minX+maxX)/2, gHalf=Math.max((maxX-minX)/2,40);
   if(!anyLight){
-    // daytime is a giant softbox — lift the silhouette to a midtone with a soft top-down sky fill
-    if(!customBgImg && DAY_SCENES.has(state.scene)){
-      const sky=pc.createLinearGradient(0,fy-h,0,fy);
-      sky.addColorStop(0,'rgba(208,218,230,0.62)'); sky.addColorStop(1,'rgba(150,162,176,0.5)');
-      pc.fillStyle=sky; pc.fillRect(0,0,pcan.width,pcan.height);
-    }
-    const rg=pc.createLinearGradient(cx+(maxX-0.36)*h,0,cx+maxX*h,0);
-    rg.addColorStop(0,'rgba(245,176,98,0)'); rg.addColorStop(1,'rgba(245,176,98,.28)');
-    pc.fillStyle=rg; pc.fillRect(0,0,pcan.width,pcan.height);
-    const lg=pc.createLinearGradient(cx+(minX+0.30)*h,0,cx+minX*h,0);
-    lg.addColorStop(0,'rgba(140,175,225,0)'); lg.addColorStop(1,'rgba(140,175,225,.15)');
-    pc.fillStyle=lg; pc.fillRect(0,0,pcan.width,pcan.height);
+    // ambient: warm rim one edge, cool kicker the other — just enough to separate from the background
+    const rg=pc.createLinearGradient(maxX-0.20*hpx,0,maxX,0);
+    rg.addColorStop(0,'rgba(245,200,150,0)'); rg.addColorStop(1,'rgba(245,200,150,.20)');
+    pc.fillStyle=rg; pc.fillRect(0,0,W,H);
+    const lg=pc.createLinearGradient(minX+0.20*hpx,0,minX,0);
+    lg.addColorStop(0,'rgba(150,180,225,0)'); lg.addColorStop(1,'rgba(150,180,225,.14)');
+    pc.fillStyle=lg; pc.fillRect(0,0,W,H);
   } else {
     for(const k of ['key','fill','rim']){
       const L=state.lt[k]; if(!L.on) continue;
-      const rad=L.phi*Math.PI/180;
-      const front=Math.cos(rad), side=Math.sin(rad);
+      const rad=L.phi*Math.PI/180, front=Math.cos(rad), side=Math.sin(rad);
       const I=(L.i/100)*Math.min(1.4,Math.pow(1.6/L.d,2));
       const col=TEMPS[L.t]||TEMPS.n;
       if(front>0.1){
-        const A=Math.min(0.8,front*I*0.72);
-        if(Math.abs(side)<0.18){
-          pc.fillStyle=`rgba(${col},${(A*0.85).toFixed(3)})`;
-          pc.fillRect(0,0,pcan.width,pcan.height);
-        }else{
+        const A=Math.min(0.7,front*I*0.6);
+        if(Math.abs(side)<0.18){ pc.fillStyle=`rgba(${col},${(A*0.8).toFixed(3)})`; pc.fillRect(0,0,W,H); }
+        else{
           const sgn=Math.sign(side);
-          const g2=pc.createLinearGradient(cx+sgn*0.34*h,0,cx-sgn*0.34*h,0);
-          g2.addColorStop(0,`rgba(${col},${A.toFixed(3)})`);
-          g2.addColorStop(1,`rgba(${col},${(A*0.10).toFixed(3)})`);
-          pc.fillStyle=g2; pc.fillRect(0,0,pcan.width,pcan.height);
+          const g2=pc.createLinearGradient(gMid+sgn*gHalf,0,gMid-sgn*gHalf,0);
+          g2.addColorStop(0,`rgba(${col},${A.toFixed(3)})`); g2.addColorStop(1,`rgba(${col},${(A*0.08).toFixed(3)})`);
+          pc.fillStyle=g2; pc.fillRect(0,0,W,H);
+          if(k==='key'){ // form shadow on the unlit side
+            const sh=pc.createLinearGradient(gMid-sgn*gHalf,0,gMid+sgn*gHalf*0.4,0);
+            sh.addColorStop(0,`rgba(8,10,14,${(A*0.55).toFixed(3)})`); sh.addColorStop(1,'rgba(8,10,14,0)');
+            pc.fillStyle=sh; pc.fillRect(0,0,W,H);
+          }
         }
       }
       if(front<-0.1){
-        const A=Math.min(0.85,-front*I*0.65);
-        const edges=Math.abs(side)<0.2?[-1,1]:[Math.sign(side)];
-        for(const sgn of edges){
+        const A=Math.min(0.8,-front*I*0.6);
+        for(const sgn of (Math.abs(side)<0.2?[-1,1]:[Math.sign(side)])){
           const ex=sgn>0?maxX:minX;
-          const g2=pc.createLinearGradient(cx+(ex-sgn*0.30)*h,0,cx+ex*h,0);
-          g2.addColorStop(0,`rgba(${col},0)`);
-          g2.addColorStop(1,`rgba(${col},${(A*(edges.length>1?0.7:1)).toFixed(3)})`);
-          pc.fillStyle=g2; pc.fillRect(0,0,pcan.width,pcan.height);
+          const g2=pc.createLinearGradient(ex-sgn*0.22*hpx,0,ex,0);
+          g2.addColorStop(0,`rgba(${col},0)`); g2.addColorStop(1,`rgba(${col},${A.toFixed(3)})`);
+          pc.fillStyle=g2; pc.fillRect(0,0,W,H);
         }
       }
     }
   }
   pc.globalCompositeOperation='source-over';
   ctx.drawImage(pcan,0,0);
+  // autofocus on the first person's face
+  const p0=people[0], sc0=TYPESCALE[p0.t]||1, hh0=hpx*sc0;
+  return {x:px(p0)+(TYPEAFX[p0.t]||0)*hh0, y:fy-(TYPEAFY[p0.t]||0.916)*hh0, s:Math.max(34,Math.min(0.2*hh0,H*0.4))};
 }
 
 function vignette(W,H){
@@ -1074,7 +1107,7 @@ function drawGrid(W,H){
     ctx.beginPath(); ctx.moveTo(0,H*t); ctx.lineTo(W,H*t); ctx.stroke();
   }
 }
-function drawHud(res,W,H,fy,hpx,sub,cxS){
+function drawHud(res,W,H,af){
   const mono=getComputedStyle(document.body).getPropertyValue('--mono');
   const sans=getComputedStyle(document.body).getPropertyValue('--sans');
   ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=2;
@@ -1082,11 +1115,11 @@ function drawHud(res,W,H,fy,hpx,sub,cxS){
   for(const [x,y,dx,dy] of [[m,m,1,1],[W-m,m,-1,1],[m,H-m,1,-1],[W-m,H-m,-1,-1]]){
     ctx.beginPath(); ctx.moveTo(x+dx*l,y); ctx.lineTo(x,y); ctx.lineTo(x,y+dy*l); ctx.stroke();
   }
-  const fxc=cxS+sub.af.x*hpx*(state.fl?-1:1), faceY=fy-sub.af.y*hpx, s=Math.max(36,Math.min(sub.af.s*hpx,H*0.4));
+  const s=af.s;
   ctx.strokeStyle='#5dd97c'; ctx.lineWidth=2;
-  ctx.strokeRect(fxc-s/2,faceY-s/2,s,s);
+  ctx.strokeRect(af.x-s/2,af.y-s/2,s,s);
   ctx.fillStyle='#5dd97c'; ctx.font='600 12px '+mono;
-  ctx.fillText('AF',fxc-s/2,faceY-s/2-7);
+  ctx.fillText('AF',af.x-s/2,af.y-s/2-7);
   const ap=(state.mode==='cine'?'T':'ƒ/')+fmtN(res.N);
   const arName=state.mode==='cine'?'  '+(ASPECTS.find(a=>a.id===state.ar)||{}).name:'';
   const txt=`${Math.round(res.f)} mm   ${ap}   ${fmtLen(state.s)}   ${res.sn.id.toUpperCase()}${arName}`;
@@ -1335,8 +1368,8 @@ $('#shotsStrip').addEventListener('click',e=>{
     const s=shots[i]; if(!s) return;
     customBgImg=null; syncBgChips();
     Object.assign(state,JSON.parse(JSON.stringify(s.state)));
-    if(!Array.isArray(state.group)) state.group=['man','woman'];
-    renderGroupUI(); render(); toast('Loaded "'+s.name+'"'+(s.custom?' — re-upload its backdrop photo':''));
+    ensurePeople(state);
+    renderPeople(); render(); toast('Loaded "'+s.name+'"'+(s.custom?' — re-upload its backdrop photo':''));
     return;
   }
   if(act==='del') shots.splice(i,1);
@@ -1363,7 +1396,7 @@ $('#bgFile').addEventListener('change',e=>{
 $('#bgClear').addEventListener('click',()=>{ customBgImg=null; syncBgChips(); render(); });
 
 // ---------- controls ----------
-const els={focal:$('#focal'),apert:$('#apert'),dist:$('#dist'),bgd:$('#bgd'),hgt:$('#hgt'),plc:$('#plc')};
+const els={focal:$('#focal'),apert:$('#apert'),dist:$('#dist'),bgd:$('#bgd'),hgt:$('#hgt')};
 function paintSlider(el){ el.style.setProperty('--p',(el.value-el.min)/(el.max-el.min)*100+'%'); }
 function populateSensors(){
   const list=state.mode==='cine'?CINE_SENSORS:SENSORS;
@@ -1380,13 +1413,10 @@ function syncInputs(){
   els.dist.value=M_S.toSlider(state.s);
   els.bgd.value=M_B.toSlider(state.b);
   els.hgt.value=Math.round(state.hp*100);
-  els.plc.value=Math.round(state.px*100);
   $('#cam').value=state.cam;
-  $('#subj').value=state.subj;
   $('#scene').value=state.scene;
   $('#ar').value=state.ar;
   $('#lscheme').value=state.ls;
-  $('#flipBtn').classList.toggle('on',state.fl);
   document.querySelectorAll('#orient button').forEach(b=>b.classList.toggle('on',b.dataset.o===state.o));
   document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===state.mode));
   $('#orientCtl').style.display=state.mode==='photo'?'block':'none';
@@ -1399,7 +1429,7 @@ function syncInputs(){
   $('#distV').textContent=fmtLen(state.s);
   $('#bgdV').textContent=fmtLen(state.b);
   $('#hgtV').textContent=fmtLen(state.hp);
-  $('#plcV').textContent=state.px===0?'centered':`${Math.abs(Math.round(state.px*100))}% ${state.px<0?'left':'right'}`;
+  $('#peopleCount').textContent=state.people.length+(state.people.length===1?' person':' people');
   for(const k of ['key','fill','rim']){
     const row=document.querySelector(`.lrow[data-l="${k}"]`), L=state.lt[k];
     row.querySelector('.lon').checked=L.on;
@@ -1412,7 +1442,6 @@ function clampState(){
   const sMin=Math.max(0.25,1.5*state.f/1000);
   state.s=Math.min(120,Math.max(sMin,state.s));
   state.b=Math.min(2000,Math.max(state.s+0.2,state.b));
-  state.px=Math.min(1,Math.max(-1,state.px));
 }
 let raf=0;
 function render(){
@@ -1430,30 +1459,41 @@ els.apert.addEventListener('input',e=>{state.N=F_STOPS[+e.target.value];render()
 els.dist.addEventListener('input',e=>{state.s=M_S.fromSlider(+e.target.value);render();});
 els.bgd.addEventListener('input',e=>{state.b=M_B.fromSlider(+e.target.value);render();});
 els.hgt.addEventListener('input',e=>{state.hp=+e.target.value/100;render();});
-els.plc.addEventListener('input',e=>{state.px=+e.target.value/100;render();});
-$('#flipBtn').addEventListener('click',()=>{state.fl=!state.fl;render();});
 $('#cam').addEventListener('change',e=>{state.cam=e.target.value;render();});
-function renderGroupUI(){
-  const show=state.subj==='group';
-  $('#groupCtl').style.display=show?'block':'none';
-  if(!show) return;
-  const g=state.group, opt=(t,v)=>`<option value="${v}"${t===v?' selected':''}>${v[0].toUpperCase()+v.slice(1)}</option>`;
-  $('#groupSlots').innerHTML=g.map((t,i)=>`<span style="display:inline-flex;align-items:center;gap:2px">
-      <select class="mini gtype" data-i="${i}">${['man','woman','child'].map(v=>opt(t,v)).join('')}</select>
-      ${g.length>1?`<button class="gdel" data-rem="${i}" title="Remove" style="background:none;border:0;color:var(--faint);cursor:pointer;font-size:12px;padding:2px 4px">✕</button>`:''}
-    </span>`).join('')
-    +(g.length<4?`<button id="gadd">＋ Add person</button>`:'');
+// ---- people roster UI ----
+function renderPeople(){
+  const sopt=(arr,sel)=>arr.map(o=>`<option value="${o.id}"${o.id===sel?' selected':''}>${o.name}</option>`).join('');
+  $('#peopleList').innerHTML=state.people.map((p,i)=>`
+    <div class="prow" data-i="${i}">
+      <div style="display:flex;gap:6px;align-items:center">
+        <select class="mini ptype" data-i="${i}" aria-label="Person type">${sopt(PTYPES,p.t)}</select>
+        <select class="mini pskin" data-i="${i}" aria-label="Skin tone">${sopt(SKINS,p.skin)}</select>
+        <span class="swatch" style="background:${skinC(p.skin)}"></span>
+        <span style="flex:1"></span>
+        ${state.people.length>1?`<button class="pdel" data-i="${i}" title="Remove">✕</button>`:''}
+      </div>
+      <div style="display:flex;gap:7px;align-items:center;margin-top:5px">
+        <span style="font-size:11px;color:var(--muted);width:26px">Pos</span>
+        <input type="range" class="ppos" data-i="${i}" min="-100" max="100" step="1" value="${Math.round((p.x||0)*100)}">
+      </div>
+    </div>`).join('');
+  $('#addPerson').style.display=state.people.length>=4?'none':'';
+  document.querySelectorAll('#peopleList .ppos').forEach(paintSlider);
 }
-$('#subj').addEventListener('change',e=>{state.subj=e.target.value;renderGroupUI();render();});
-$('#groupSlots').addEventListener('change',e=>{
-  const s=e.target.closest('.gtype'); if(!s) return;
-  state.group[+s.dataset.i]=s.value; renderGroupUI(); render();
+$('#peopleList').addEventListener('change',e=>{
+  const t=e.target.closest('.ptype'), sk=e.target.closest('.pskin');
+  if(t){ state.people[+t.dataset.i].t=t.value; renderPeople(); render(); }
+  else if(sk){ state.people[+sk.dataset.i].skin=sk.value; renderPeople(); render(); }
 });
-$('#groupSlots').addEventListener('click',e=>{
-  const rem=e.target.closest('[data-rem]'), add=e.target.closest('#gadd');
-  if(rem){ state.group.splice(+rem.dataset.rem,1); renderGroupUI(); render(); }
-  else if(add && state.group.length<4){ state.group.push('child'); renderGroupUI(); render(); }
+$('#peopleList').addEventListener('input',e=>{
+  const pos=e.target.closest('.ppos'); if(!pos) return;
+  state.people[+pos.dataset.i].x=+pos.value/100; paintSlider(pos); render(); // canvas only — don't rebuild the list mid-drag
 });
+$('#peopleList').addEventListener('click',e=>{
+  const del=e.target.closest('.pdel'); if(!del||state.people.length<=1) return;
+  state.people.splice(+del.dataset.i,1); renderPeople(); render();
+});
+$('#addPerson').addEventListener('click',()=>{ addPerson(); renderPeople(); render(); });
 $('#scene').addEventListener('change',e=>{state.scene=e.target.value;render();});
 $('#ar').addEventListener('change',e=>{state.ar=e.target.value;render();});
 $('#orient').addEventListener('click',e=>{const b=e.target.closest('button');if(b){state.o=b.dataset.o;render();}});
@@ -1476,47 +1516,45 @@ $('#tglLights').addEventListener('change',e=>{state.lights=e.target.checked;rend
 $('#tglGrid').addEventListener('change',e=>{state.grid=e.target.checked;render();});
 $('#tglHud').addEventListener('change',e=>{state.hud=e.target.checked;render();});
 
-// presets
+// presets — `ppl` is the people roster: [{t, skin, x}]
 const PHOTO_PRESETS=[
-  {n:'Classic portrait', v:{cam:'ff',f:85,N:1.8,s:2.5,b:18,o:'l',subj:'woman',scene:'city',ls:'none'}},
-  {n:'Sunny portrait',   v:{cam:'ff',f:85,N:2,s:2.5,b:18,o:'p',subj:'woman',scene:'meadow',ls:'none'}},
-  {n:'Couple — park',    v:{cam:'ff',f:85,N:2,s:3,b:22,o:'l',subj:'couple',scene:'meadow',ls:'none'}},
-  {n:'Group of four',    v:{cam:'ff',f:50,N:4,s:5,b:30,o:'l',subj:'group',grp:['man','woman','child','child'],scene:'meadow',ls:'none'}},
-  {n:'Overcast headshot',v:{cam:'ff',f:135,N:2,s:2,b:9,o:'p',subj:'woman',scene:'overcast',ls:'none'}},
-  {n:'Day street',       v:{cam:'apsc',f:35,N:8,s:4,b:30,o:'l',subj:'man',scene:'urbanday',ls:'none',px:-0.3}},
-  {n:'Golden hour',      v:{cam:'ff',f:135,N:2,s:3,b:25,o:'p',subj:'woman',scene:'forest',ls:'backlit'}},
-  {n:'Family beach',     v:{cam:'ff',f:35,N:2.8,s:4,b:40,o:'l',subj:'family',scene:'beach',ls:'none'}},
-  {n:'Studio 3-point',   v:{cam:'ff',f:85,N:4,s:2.2,b:6,o:'p',subj:'woman',scene:'studio',ls:'3point'}},
-  {n:'Neon portrait',    v:{cam:'ff',f:50,N:1.4,s:2,b:7,o:'p',subj:'man',scene:'neon',ls:'backlit',px:-0.25}},
-  {n:'Sports 400',       v:{cam:'ff',f:400,N:2.8,s:30,b:55,o:'l',subj:'soccer',scene:'stadium',ls:'none'}},
-  {n:'Flash snapshot',   v:{cam:'ph13',f:6.9,N:1.8,s:2.5,b:16,o:'p',subj:'family',scene:'city',ls:'flash'}},
-  {n:'Landscape',        v:{cam:'ff',f:24,N:11,s:8,b:900,o:'l',subj:'man',scene:'beach',ls:'none',px:0.3}},
+  {n:'Classic portrait', v:{cam:'ff',f:85,N:1.8,s:2.5,b:18,o:'l',ppl:[{t:'woman',skin:'fair'}],scene:'city',ls:'none'}},
+  {n:'Sunny portrait',   v:{cam:'ff',f:85,N:2,s:2.5,b:18,o:'p',ppl:[{t:'woman',skin:'tan'}],scene:'meadow',ls:'none'}},
+  {n:'Couple — park',    v:{cam:'ff',f:85,N:2,s:3,b:22,o:'l',ppl:[{t:'man',skin:'medium',x:-0.18},{t:'woman',skin:'fair',x:0.18}],scene:'meadow',ls:'none'}},
+  {n:'Group of four',    v:{cam:'ff',f:50,N:4,s:5,b:30,o:'l',ppl:[{t:'man',skin:'brown',x:-0.34},{t:'woman',skin:'tan',x:-0.11},{t:'child',skin:'tan',x:0.1},{t:'child',skin:'brown',x:0.32}],scene:'meadow',ls:'none'}},
+  {n:'Overcast headshot',v:{cam:'ff',f:135,N:2,s:2,b:9,o:'p',ppl:[{t:'man',skin:'deep'}],scene:'overcast',ls:'none'}},
+  {n:'Day street',       v:{cam:'apsc',f:35,N:8,s:4,b:30,o:'l',ppl:[{t:'man',skin:'medium',x:-0.3}],scene:'urbanday',ls:'none'}},
+  {n:'Golden hour',      v:{cam:'ff',f:135,N:2,s:3,b:25,o:'p',ppl:[{t:'woman',skin:'light'}],scene:'forest',ls:'backlit'}},
+  {n:'Family beach',     v:{cam:'ff',f:35,N:2.8,s:4,b:40,o:'l',ppl:[{t:'man',skin:'tan',x:-0.24},{t:'woman',skin:'medium',x:0.24},{t:'child',skin:'medium',x:0}],scene:'beach',ls:'none'}},
+  {n:'Studio 3-point',   v:{cam:'ff',f:85,N:4,s:2.2,b:6,o:'p',ppl:[{t:'woman',skin:'medium'}],scene:'studio',ls:'3point'}},
+  {n:'Neon portrait',    v:{cam:'ff',f:50,N:1.4,s:2,b:7,o:'p',ppl:[{t:'man',skin:'brown',x:-0.25}],scene:'neon',ls:'backlit'}},
+  {n:'Sports 400',       v:{cam:'ff',f:400,N:2.8,s:30,b:55,o:'l',ppl:[{t:'soccer',skin:'deep'}],scene:'stadium',ls:'none'}},
+  {n:'Flash snapshot',   v:{cam:'ph13',f:6.9,N:1.8,s:2.5,b:16,o:'p',ppl:[{t:'man',skin:'fair',x:-0.18},{t:'woman',skin:'medium',x:0.18}],scene:'city',ls:'flash'}},
+  {n:'Landscape',        v:{cam:'ff',f:24,N:11,s:8,b:900,o:'l',ppl:[{t:'man',skin:'medium',x:0.3}],scene:'beach',ls:'none'}},
 ];
 const CINE_PRESETS=[
-  {n:'Interview',        v:{cam:'s35',f:50,N:2.8,s:1.8,b:5,ar:'1.78',subj:'man',scene:'studio',ls:'keyfill',px:-0.22}},
-  {n:'Daylight ext.',    v:{cam:'s35',f:32,N:4,s:4,b:40,ar:'2.39',subj:'couple',scene:'meadow',ls:'none'}},
-  {n:'Anamorphic night', v:{cam:'lf',f:75,N:2,s:3,b:20,ar:'2.39',subj:'woman',scene:'city',ls:'3point'}},
-  {n:'Neon noir',        v:{cam:'lf',f:50,N:2,s:2.5,b:7,ar:'2.39',subj:'man',scene:'neon',ls:'backlit',px:-0.38}},
-  {n:'Soundstage',       v:{cam:'s35',f:35,N:2.8,s:2.2,b:5,ar:'1.85',subj:'woman',scene:'studio',ls:'3point'}},
-  {n:'Stadium hero',     v:{cam:'vv',f:135,N:2,s:12,b:45,ar:'2.39',subj:'runner',scene:'stadium',ls:'backlit',px:0.15}},
-  {n:'Beach wide',       v:{cam:'a65',f:40,N:2.8,s:4,b:60,ar:'2.00',subj:'family',scene:'beach',ls:'none'}},
-  {n:'Doc handheld',     v:{cam:'s16',f:12,N:2,s:2,b:12,ar:'1.78',subj:'man',scene:'forest',ls:'none'}},
+  {n:'Interview',        v:{cam:'s35',f:50,N:2.8,s:1.8,b:5,ar:'1.78',ppl:[{t:'man',skin:'medium',x:-0.22}],scene:'studio',ls:'keyfill'}},
+  {n:'Daylight ext.',    v:{cam:'s35',f:32,N:4,s:4,b:40,ar:'2.39',ppl:[{t:'man',skin:'tan',x:-0.18},{t:'woman',skin:'fair',x:0.18}],scene:'meadow',ls:'none'}},
+  {n:'Anamorphic night', v:{cam:'lf',f:75,N:2,s:3,b:20,ar:'2.39',ppl:[{t:'woman',skin:'light'}],scene:'city',ls:'3point'}},
+  {n:'Neon noir',        v:{cam:'lf',f:50,N:2,s:2.5,b:7,ar:'2.39',ppl:[{t:'man',skin:'brown',x:-0.38}],scene:'neon',ls:'backlit'}},
+  {n:'Soundstage',       v:{cam:'s35',f:35,N:2.8,s:2.2,b:5,ar:'1.85',ppl:[{t:'woman',skin:'medium'}],scene:'studio',ls:'3point'}},
+  {n:'Stadium hero',     v:{cam:'vv',f:135,N:2,s:12,b:45,ar:'2.39',ppl:[{t:'runner',skin:'deep',x:0.15}],scene:'stadium',ls:'backlit'}},
+  {n:'Beach wide',       v:{cam:'a65',f:40,N:2.8,s:4,b:60,ar:'2.00',ppl:[{t:'man',skin:'tan',x:-0.24},{t:'woman',skin:'medium',x:0.24},{t:'child',skin:'medium',x:0}],scene:'beach',ls:'none'}},
+  {n:'Doc handheld',     v:{cam:'s16',f:12,N:2,s:2,b:12,ar:'1.78',ppl:[{t:'man',skin:'medium'}],scene:'forest',ls:'none'}},
 ];
 $('#presets').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   const list=state.mode==='cine'?CINE_PRESETS:PHOTO_PRESETS;
   const p=list[+b.dataset.i]; if(!p) return;
-  const v={px:0,fl:false,...p.v};
-  const {ls,grp,...rest}=v;
+  const {ls,ppl,...rest}=p.v;
   Object.assign(state,rest);
-  if(grp) state.group=grp.slice(0,4);
+  state.people=normPeople(ppl);
   applyScheme(ls||'none');
-  renderGroupUI();
+  renderPeople();
   render();
 });
 
 // select options
-$('#subj').innerHTML=Object.entries(SUBJECTS).map(([id,s])=>`<option value="${id}">${s.name}</option>`).join('');
 $('#scene').innerHTML=SCENES.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
 $('#ar').innerHTML=ASPECTS.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
 $('#lscheme').innerHTML=SCHEMES.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
@@ -1528,8 +1566,8 @@ function queueHash(){
   hashT=setTimeout(()=>{
     const p=new URLSearchParams({mode:state.mode,cam:state.cam,o:state.o,ar:state.ar,
       f:state.f.toFixed(1),N:state.N,s:state.s.toFixed(2),b:state.b.toFixed(1),hp:state.hp,
-      px:state.px.toFixed(2),fl:state.fl?1:0,
-      subj:state.subj,grp:state.group.join('-'),scene:state.scene,ls:state.ls});
+      ppl:state.people.map(pp=>`${pp.t}_${pp.skin}_${(pp.x||0).toFixed(2)}`).join('~'),
+      scene:state.scene,ls:state.ls});
     history.replaceState(null,'','#'+p.toString());
   },300);
 }
@@ -1540,12 +1578,12 @@ function readHash(){
   if(p.get('cam')&&ALL_SENSORS.some(s=>s.id===p.get('cam'))) state.cam=p.get('cam');
   if(p.get('o')==='p'||p.get('o')==='l') state.o=p.get('o');
   if(p.get('ar')&&ASPECTS.some(a=>a.id===p.get('ar'))) state.ar=p.get('ar');
-  if(p.get('subj')&&SUBJECTS[p.get('subj')]) state.subj=p.get('subj');
-  if(p.get('grp')){ const g=p.get('grp').split('-').filter(t=>FIGFN[t]); if(g.length) state.group=g.slice(0,4); }
+  if(p.get('ppl')){
+    const arr=p.get('ppl').split('~').map(seg=>{const [t,skin,x]=seg.split('_');return {t,skin,x:parseFloat(x)};});
+    state.people=normPeople(arr);
+  }
   if(p.get('scene')&&SCENES.some(s=>s.id===p.get('scene'))) state.scene=p.get('scene');
   if(p.get('ls')&&SCHEMES.some(s=>s.id===p.get('ls'))&&p.get('ls')!=='custom') applyScheme(p.get('ls'));
-  if(p.get('fl')==='1') state.fl=true;
-  const pxv=parseFloat(p.get('px')); if(isFinite(pxv)) state.px=Math.min(1,Math.max(-1,pxv));
   for(const [k,key] of [['f','f'],['N','N'],['s','s'],['b','b'],['hp','hp']]){
     const v=parseFloat(p.get(k)); if(isFinite(v)&&v>0) state[key]=v;
   }
@@ -1588,8 +1626,9 @@ function sheetCaption(st){
   const r=compute(st);
   const dof=isFinite(r.Df)?(r.Df-r.Dn)/1000:Infinity;
   const ap=(st.mode==='cine'?'T':'ƒ/')+fmtN(st.N);
-  const sc=SCENES.find(x=>x.id===st.scene), sb=SUBJECTS[st.subj];
-  return `${Math.round(st.f)}mm ${ap} · focus ${fmtLen(st.s)} · bg ${fmtLen(st.b)} · DoF ${fmtLen(dof)} · blur ${(r.bgFrac*100).toFixed(1)}%${sb?' · '+sb.name:''}${sc?' · '+sc.name:''}`;
+  const sc=SCENES.find(x=>x.id===st.scene);
+  const ppl=Array.isArray(st.people)&&st.people.length?(st.people.length===1?(PTYPES.find(t=>t.id===st.people[0].t)||{}).name:st.people.length+' people'):'';
+  return `${Math.round(st.f)}mm ${ap} · focus ${fmtLen(st.s)} · bg ${fmtLen(st.b)} · DoF ${fmtLen(dof)} · blur ${(r.bgFrac*100).toFixed(1)}%${ppl?' · '+ppl:''}${sc?' · '+sc.name:''}`;
 }
 function exportPDF(){
   const shots=loadShots();
@@ -1624,10 +1663,11 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change',e=>{
 
 // ---------- go ----------
 readHash();
+ensurePeople(state);
 populateSensors();
 populatePresets();
 renderShots();
-renderGroupUI();
+renderPeople();
 syncBgChips();
 applyTheme(curTheme(),false);
 if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }catch(e){} }
