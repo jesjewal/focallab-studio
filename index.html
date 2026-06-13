@@ -1360,9 +1360,12 @@ $('#subj').addEventListener('change',e=>{state.subj=e.target.value;render();});
 $('#scene').addEventListener('change',e=>{state.scene=e.target.value;render();});
 $('#ar').addEventListener('change',e=>{state.ar=e.target.value;render();});
 $('#orient').addEventListener('click',e=>{const b=e.target.closest('button');if(b){state.o=b.dataset.o;render();}});
+const fMem={photo:85, cine:35};   // each mode remembers its own focal length
 $('#modeSeg').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b||b.dataset.m===state.mode) return;
+  fMem[state.mode]=state.f;        // save focal for the mode we're leaving
   state.mode=b.dataset.m;
+  state.f=fMem[state.mode];        // restore focal for the mode we're entering
   populateSensors(); populatePresets(); renderShots(); render();
 });
 $('#lscheme').addEventListener('change',e=>{applyScheme(e.target.value);render();});
