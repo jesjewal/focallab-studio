@@ -982,7 +982,7 @@ function normPeople(arr){
   return a.map((p,i)=>({
     t:PTYPES.some(x=>x.id===p.t)?p.t:'woman',
     skin:SKINS.some(x=>x.id===p.skin)?p.skin:SKINS[i%SKINS.length].id,
-    x:Math.max(-1,Math.min(1,isFinite(+p.x)?+p.x:0)),
+    x:Math.max(-6,Math.min(6,isFinite(+p.x)?+p.x:0)),  // lateral metres from the optical axis
     c:p.c||CLOTHES[i%CLOTHES.length],
     hair:p.hair||HAIRS[i%HAIRS.length]
   }));
@@ -1000,12 +1000,15 @@ function ensurePeople(st){
 }
 function addPerson(){
   if(state.people.length>=4) return;
-  const i=state.people.length, defX=[0,0.24,-0.24,0.42][i]||0;
+  const i=state.people.length, defX=[0,0.7,-0.7,1.2][i]||0;  // metres
   state.people.push({t:'woman',skin:SKINS[i%SKINS.length].id,x:defX,c:CLOTHES[i%CLOTHES.length],hair:HAIRS[i%HAIRS.length]});
 }
 function drawPeople(W,H,fy,hpx){
   const people=state.people.length?state.people:[{t:'woman',skin:'medium',x:0,c:CLOTHES[0],hair:HAIRS[0]}];
-  const px=p=>W/2+(p.x||0)*0.42*W;
+  // people stand at fixed lateral metres; px-per-metre at the subject plane = hpx/subject height.
+  // zooming in grows hpx, so edge people slide out of frame instead of moving — operator must recompose.
+  const ppmS=hpx/state.hp;
+  const px=p=>W/2+(p.x||0)*ppmS;
   // ground shadows (under everyone), offset opposite the key
   const key=state.lt.key, kRad=key.phi*Math.PI/180;
   const shoff=key.on?Math.sin(kRad)*Math.max(0,Math.cos(kRad))*-0.3:0;
@@ -1254,6 +1257,7 @@ try{
   UNITS=localStorage.getItem('focallab.units')
     || (/-(US|LR|MM)\b/i.test(navigator.language||'')?'ft':'m');
 }catch(e){ UNITS=/-(US)\b/i.test(navigator.language||'')?'ft':'m'; }
+function posLabel(m){ return Math.abs(m)<0.05?'center':fmtLen(Math.abs(m))+(m<0?' L':' R'); }
 function fmtLen(m){
   if(!isFinite(m)) return '∞';
   if(m<0) return '–';
@@ -1474,7 +1478,8 @@ function renderPeople(){
       </div>
       <div style="display:flex;gap:7px;align-items:center;margin-top:5px">
         <span style="font-size:11px;color:var(--muted);width:26px">Pos</span>
-        <input type="range" class="ppos" data-i="${i}" min="-100" max="100" step="1" value="${Math.round((p.x||0)*100)}">
+        <input type="range" class="ppos" data-i="${i}" min="-400" max="400" step="5" value="${Math.round((p.x||0)*100)}">
+        <span class="pposv" data-i="${i}" style="font-family:var(--mono);font-size:10.5px;color:var(--muted);width:46px;text-align:right">${posLabel(p.x||0)}</span>
       </div>
     </div>`).join('');
   $('#addPerson').style.display=state.people.length>=4?'none':'';
@@ -1487,7 +1492,10 @@ $('#peopleList').addEventListener('change',e=>{
 });
 $('#peopleList').addEventListener('input',e=>{
   const pos=e.target.closest('.ppos'); if(!pos) return;
-  state.people[+pos.dataset.i].x=+pos.value/100; paintSlider(pos); render(); // canvas only — don't rebuild the list mid-drag
+  const i=+pos.dataset.i; state.people[i].x=+pos.value/100;
+  paintSlider(pos);
+  const v=document.querySelector(`.pposv[data-i="${i}"]`); if(v) v.textContent=posLabel(state.people[i].x);
+  render(); // canvas only — don't rebuild the list mid-drag
 });
 $('#peopleList').addEventListener('click',e=>{
   const del=e.target.closest('.pdel'); if(!del||state.people.length<=1) return;
@@ -1520,26 +1528,26 @@ $('#tglHud').addEventListener('change',e=>{state.hud=e.target.checked;render();}
 const PHOTO_PRESETS=[
   {n:'Classic portrait', v:{cam:'ff',f:85,N:1.8,s:2.5,b:18,o:'l',ppl:[{t:'woman',skin:'fair'}],scene:'city',ls:'none'}},
   {n:'Sunny portrait',   v:{cam:'ff',f:85,N:2,s:2.5,b:18,o:'p',ppl:[{t:'woman',skin:'tan'}],scene:'meadow',ls:'none'}},
-  {n:'Couple — park',    v:{cam:'ff',f:85,N:2,s:3,b:22,o:'l',ppl:[{t:'man',skin:'medium',x:-0.18},{t:'woman',skin:'fair',x:0.18}],scene:'meadow',ls:'none'}},
-  {n:'Group of four',    v:{cam:'ff',f:50,N:4,s:5,b:30,o:'l',ppl:[{t:'man',skin:'brown',x:-0.34},{t:'woman',skin:'tan',x:-0.11},{t:'child',skin:'tan',x:0.1},{t:'child',skin:'brown',x:0.32}],scene:'meadow',ls:'none'}},
+  {n:'Couple — park',    v:{cam:'ff',f:85,N:2,s:3,b:22,o:'l',ppl:[{t:'man',skin:'medium',x:-0.45},{t:'woman',skin:'fair',x:0.45}],scene:'meadow',ls:'none'}},
+  {n:'Group of four',    v:{cam:'ff',f:50,N:4,s:5,b:30,o:'l',ppl:[{t:'man',skin:'brown',x:-1.05},{t:'woman',skin:'tan',x:-0.35},{t:'child',skin:'tan',x:0.35},{t:'child',skin:'brown',x:1.05}],scene:'meadow',ls:'none'}},
   {n:'Overcast headshot',v:{cam:'ff',f:135,N:2,s:2,b:9,o:'p',ppl:[{t:'man',skin:'deep'}],scene:'overcast',ls:'none'}},
-  {n:'Day street',       v:{cam:'apsc',f:35,N:8,s:4,b:30,o:'l',ppl:[{t:'man',skin:'medium',x:-0.3}],scene:'urbanday',ls:'none'}},
+  {n:'Day street',       v:{cam:'apsc',f:35,N:8,s:4,b:30,o:'l',ppl:[{t:'man',skin:'medium',x:-0.9}],scene:'urbanday',ls:'none'}},
   {n:'Golden hour',      v:{cam:'ff',f:135,N:2,s:3,b:25,o:'p',ppl:[{t:'woman',skin:'light'}],scene:'forest',ls:'backlit'}},
-  {n:'Family beach',     v:{cam:'ff',f:35,N:2.8,s:4,b:40,o:'l',ppl:[{t:'man',skin:'tan',x:-0.24},{t:'woman',skin:'medium',x:0.24},{t:'child',skin:'medium',x:0}],scene:'beach',ls:'none'}},
+  {n:'Family beach',     v:{cam:'ff',f:35,N:2.8,s:4,b:40,o:'l',ppl:[{t:'man',skin:'tan',x:-0.7},{t:'woman',skin:'medium',x:0.7},{t:'child',skin:'medium',x:0}],scene:'beach',ls:'none'}},
   {n:'Studio 3-point',   v:{cam:'ff',f:85,N:4,s:2.2,b:6,o:'p',ppl:[{t:'woman',skin:'medium'}],scene:'studio',ls:'3point'}},
-  {n:'Neon portrait',    v:{cam:'ff',f:50,N:1.4,s:2,b:7,o:'p',ppl:[{t:'man',skin:'brown',x:-0.25}],scene:'neon',ls:'backlit'}},
+  {n:'Neon portrait',    v:{cam:'ff',f:50,N:1.4,s:2,b:7,o:'p',ppl:[{t:'man',skin:'brown',x:-0.5}],scene:'neon',ls:'backlit'}},
   {n:'Sports 400',       v:{cam:'ff',f:400,N:2.8,s:30,b:55,o:'l',ppl:[{t:'soccer',skin:'deep'}],scene:'stadium',ls:'none'}},
-  {n:'Flash snapshot',   v:{cam:'ph13',f:6.9,N:1.8,s:2.5,b:16,o:'p',ppl:[{t:'man',skin:'fair',x:-0.18},{t:'woman',skin:'medium',x:0.18}],scene:'city',ls:'flash'}},
-  {n:'Landscape',        v:{cam:'ff',f:24,N:11,s:8,b:900,o:'l',ppl:[{t:'man',skin:'medium',x:0.3}],scene:'beach',ls:'none'}},
+  {n:'Flash snapshot',   v:{cam:'ph13',f:6.9,N:1.8,s:2.5,b:16,o:'p',ppl:[{t:'man',skin:'fair',x:-0.45},{t:'woman',skin:'medium',x:0.45}],scene:'city',ls:'flash'}},
+  {n:'Landscape',        v:{cam:'ff',f:24,N:11,s:8,b:900,o:'l',ppl:[{t:'man',skin:'medium',x:1.6}],scene:'beach',ls:'none'}},
 ];
 const CINE_PRESETS=[
-  {n:'Interview',        v:{cam:'s35',f:50,N:2.8,s:1.8,b:5,ar:'1.78',ppl:[{t:'man',skin:'medium',x:-0.22}],scene:'studio',ls:'keyfill'}},
-  {n:'Daylight ext.',    v:{cam:'s35',f:32,N:4,s:4,b:40,ar:'2.39',ppl:[{t:'man',skin:'tan',x:-0.18},{t:'woman',skin:'fair',x:0.18}],scene:'meadow',ls:'none'}},
+  {n:'Interview',        v:{cam:'s35',f:50,N:2.8,s:1.8,b:5,ar:'1.78',ppl:[{t:'man',skin:'medium',x:-0.4}],scene:'studio',ls:'keyfill'}},
+  {n:'Daylight ext.',    v:{cam:'s35',f:32,N:4,s:4,b:40,ar:'2.39',ppl:[{t:'man',skin:'tan',x:-0.55},{t:'woman',skin:'fair',x:0.55}],scene:'meadow',ls:'none'}},
   {n:'Anamorphic night', v:{cam:'lf',f:75,N:2,s:3,b:20,ar:'2.39',ppl:[{t:'woman',skin:'light'}],scene:'city',ls:'3point'}},
-  {n:'Neon noir',        v:{cam:'lf',f:50,N:2,s:2.5,b:7,ar:'2.39',ppl:[{t:'man',skin:'brown',x:-0.38}],scene:'neon',ls:'backlit'}},
+  {n:'Neon noir',        v:{cam:'lf',f:50,N:2,s:2.5,b:7,ar:'2.39',ppl:[{t:'man',skin:'brown',x:-0.7}],scene:'neon',ls:'backlit'}},
   {n:'Soundstage',       v:{cam:'s35',f:35,N:2.8,s:2.2,b:5,ar:'1.85',ppl:[{t:'woman',skin:'medium'}],scene:'studio',ls:'3point'}},
-  {n:'Stadium hero',     v:{cam:'vv',f:135,N:2,s:12,b:45,ar:'2.39',ppl:[{t:'runner',skin:'deep',x:0.15}],scene:'stadium',ls:'backlit'}},
-  {n:'Beach wide',       v:{cam:'a65',f:40,N:2.8,s:4,b:60,ar:'2.00',ppl:[{t:'man',skin:'tan',x:-0.24},{t:'woman',skin:'medium',x:0.24},{t:'child',skin:'medium',x:0}],scene:'beach',ls:'none'}},
+  {n:'Stadium hero',     v:{cam:'vv',f:135,N:2,s:12,b:45,ar:'2.39',ppl:[{t:'runner',skin:'deep',x:1.2}],scene:'stadium',ls:'backlit'}},
+  {n:'Beach wide',       v:{cam:'a65',f:40,N:2.8,s:4,b:60,ar:'2.00',ppl:[{t:'man',skin:'tan',x:-0.7},{t:'woman',skin:'medium',x:0.7},{t:'child',skin:'medium',x:0}],scene:'beach',ls:'none'}},
   {n:'Doc handheld',     v:{cam:'s16',f:12,N:2,s:2,b:12,ar:'1.78',ppl:[{t:'man',skin:'medium'}],scene:'forest',ls:'none'}},
 ];
 $('#presets').addEventListener('click',e=>{

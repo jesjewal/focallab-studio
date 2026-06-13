@@ -1,4 +1,4 @@
-const CACHE = 'focallab-v6';
+const CACHE = 'focallab-v7';
 const ASSETS = ['./', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', e => {
