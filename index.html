@@ -247,6 +247,9 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
       <div class="ctl">
         <div class="row"><label for="subj">Subject</label></div>
         <select id="subj" aria-label="Subject"></select>
+        <div id="groupCtl" style="display:none;margin-top:8px">
+          <div class="chips" id="groupSlots"></div>
+        </div>
       </div>
       <div class="ctl">
         <div class="row"><label for="scene">Location</label></div>
@@ -419,7 +422,7 @@ const ASPECTS=[
 const F_STOPS=[0.95,1.0,1.1,1.2,1.4,1.6,1.8,2,2.2,2.5,2.8,3.2,3.5,4,4.5,5,5.6,6.3,7.1,8,9,10,11,13,14,16,18,20,22,25,29,32];
 const state={mode:'photo', cam:'ff', o:'l', ar:'2.39', f:85, N:1.8, s:2.5, b:18, hp:1.75,
   px:0, fl:false,
-  subj:'woman', scene:'city', lights:true, grid:false, hud:true,
+  subj:'woman', group:['man','woman'], scene:'city', lights:true, grid:false, hud:true,
   ls:'none',
   lt:{key: {on:false, phi:-40, d:1.8, i:75, t:'w'},
       fill:{on:false, phi:50,  d:2.2, i:35, t:'n'},
@@ -454,6 +457,9 @@ function markCustom(){ state.ls='custom'; }
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 
 const SCENES=[
+  {id:'meadow',  name:'Sunny meadow — day'},
+  {id:'urbanday',name:'City street — day'},
+  {id:'overcast',name:'Overcast park — day'},
   {id:'city',    name:'City park — dusk'},
   {id:'forest',  name:'Forest — golden hour'},
   {id:'beach',   name:'Beach — sunset'},
@@ -461,6 +467,7 @@ const SCENES=[
   {id:'neon',    name:'Neon street — night'},
   {id:'studio',  name:'Soundstage — studio'},
 ];
+const DAY_SCENES=new Set(['meadow','urbanday','overcast']);
 
 function genWorldFor(scene){
   const r=mulberry32(20260611);
@@ -618,6 +625,51 @@ function genWorldFor(scene){
     for(let i=0;i<8;i++) w.bgLights.push({x:(1.2+r()*4)*(i%2?1:-1),y:0.25+r()*1.4,c:i%3?'#ff5a5a':'#7bff9e',phys:0.035});
     for(let sx=-8;sx<=8;sx+=1.3) w.bgLights.push({x:sx+(r()-.5)*.2,y:3.2+(r()-.5)*.15,c:'#ffd9a3',phys:0.09});
   }
+
+  else if(scene==='meadow'){ // sunny park / meadow — bright day
+    w.palette={sky:[[0,'#2f72c8'],[0.30,'#5f9bdc'],[0.46,'#a9cdee'],[0.52,'#dcebf6']],
+      glow:{x:0.72,c:'255,250,225',a:0.45,r:0.5},
+      ground:[[0,'#7faa54'],[0.18,'#5d8a3c'],[0.55,'#3f6a2a'],[1,'#27451c']]};
+    w.sun={x:0.74,y:0.40,phys:26,c:'#fff6da'};
+    // distant tree line + rolling shrubs
+    let fx=-95;
+    while(fx<95){const bw=12+r()*16,bh=4+r()*4; w.farSil.push({t:'blob',x:fx,y:bh*0.5,rx:bw/2,ry:bh*0.6,c:'#5a8a46'}); fx+=bw*0.6;}
+    for(let i=0;i<7;i++) w.bgSil.push({t:'tree',x:(4+r()*28)*(i%2?1:-1),h:4.5+r()*2.2,c:'#4f8a32',tc:'#5a4631'});
+    for(let i=0;i<10;i++) w.bgSil.push({t:'blob',x:-34+r()*68,y:0.5+r()*0.5,rx:1+r()*1.4,ry:0.6+r()*0.4,c:'#3c6a28'});
+    // backlit specular sparkle through the grass & leaves (daytime bokeh, sparse)
+    for(let i=0;i<70;i++) w.bgLights.push({x:-30+r()*60,y:0.3+r()*4.5,c:r()<.5?'#fff6cf':'#d8f0a0',phys:0.05+r()*0.10});
+  }
+
+  else if(scene==='urbanday'){ // city sidewalk — daytime
+    w.palette={sky:[[0,'#4a86cc'],[0.32,'#79a8da'],[0.5,'#c2d8ec']],
+      glow:{x:0.5,c:'255,250,235',a:0.28,r:0.5},
+      ground:[[0,'#9aa1a8'],[0.25,'#7c838b'],[1,'#4a4f55']]};
+    // sunlit buildings (lighter mid-tones, not silhouettes), with windows
+    let x=-42;
+    while(x<40){
+      const bw=7+r()*9, bh=10+r()*16, shade=['#7d8a9c','#8c97a6','#6f7c8e','#97a1b0'][Math.floor(r()*4)];
+      w.bgSil.push({t:'rect',x,y:0,w:bw,h:bh,c:shade,win:true});
+      x+=bw+(1.5+r()*4);
+    }
+    // far skyline, hazier/cooler
+    let fx=-95;
+    while(fx<95){const bw=8+r()*10,bh=8+r()*18; w.farSil.push({t:'rect',x:fx,y:0,w:bw,h:bh,c:'#aab6c6'}); fx+=bw+(3+r()*6);}
+    // street trees + a few window glints
+    for(let i=0;i<6;i++) w.bgSil.push({t:'tree',x:(4+r()*26)*(i%2?1:-1),h:3.5+r()*1.6,c:'#4f7e3a',tc:'#54422f'});
+    for(let i=0;i<30;i++) w.bgLights.push({x:-30+r()*60,y:3+r()*12,c:'#eaf2ff',phys:0.05+r()*0.07});
+  }
+
+  else if(scene==='overcast'){ // soft flat daylight — great for portraits
+    w.palette={sky:[[0,'#c6ccd2'],[0.4,'#d7dce1'],[0.52,'#e4e8ec']],
+      glow:{x:0.5,c:'255,255,255',a:0.22,r:0.6},
+      ground:[[0,'#7f8a72'],[0.2,'#5f6a55'],[1,'#3a4234']]};
+    let fx=-95;
+    while(fx<95){const bw=14+r()*18,bh=4+r()*4; w.farSil.push({t:'blob',x:fx,y:bh*0.5,rx:bw/2,ry:bh*0.6,c:'#8b9486'}); fx+=bw*0.6;}
+    for(let i=0;i<8;i++) w.bgSil.push({t:'tree',x:(4+r()*28)*(i%2?1:-1),h:4+r()*2.2,c:'#5a7258',tc:'#4f463c'});
+    for(let i=0;i<8;i++) w.bgSil.push({t:'blob',x:-34+r()*68,y:0.5+r()*0.5,rx:1+r()*1.3,ry:0.6+r()*0.4,c:'#4c5e4a'});
+    // overcast = diffuse, almost no specular bokeh
+    for(let i=0;i<14;i++) w.bgLights.push({x:-26+r()*52,y:1+r()*4,c:'#f0f4f6',phys:0.05});
+  }
   return w;
 }
 const WORLDS={};
@@ -692,10 +744,11 @@ function drawSil(o,items,W,gY,ppm){
         break;}
       case 'tree':{
         const tx=px(it.x), g0=py(0), th=it.h*ppm, r0=it.h*0.30*ppm;
-        o.strokeStyle='#0a0e15'; o.lineWidth=Math.max(it.h*0.05*ppm,1);
-        o.beginPath(); o.moveTo(tx,g0); o.lineTo(tx,g0-th*0.55); o.stroke();
+        // trunk only rises into the canopy (so daytime trees don't read as bare poles)
+        o.strokeStyle=it.tc||'#0a0e15'; o.lineWidth=Math.max(it.h*0.06*ppm,1);
+        o.beginPath(); o.moveTo(tx,g0); o.lineTo(tx,g0-th*0.42); o.stroke();
         o.fillStyle=it.c;
-        for(const [ox,oy,rr] of [[0,0.70,0.92],[-0.62,0.55,0.72],[0.62,0.56,0.74]]){
+        for(const [ox,oy,rr] of [[0,0.66,0.98],[-0.6,0.5,0.8],[0.6,0.52,0.82],[0,0.84,0.6]]){
           o.beginPath(); o.arc(tx+ox*r0,g0-oy*th,r0*rr,0,7); o.fill();
         }
         break;}
@@ -826,7 +879,7 @@ function drawScene(res){
     ctx.strokeStyle='rgba(210,230,215,.28)'; ctx.lineWidth=Math.max(0.06*ppmS,1);
     ctx.beginPath(); ctx.ellipse(cxS,fy,3.4*ppmS,0.17*ppmS,0,0,7); ctx.stroke();
   }
-  const sub=SUBJECTS[state.subj]||SUBJECTS.woman;
+  const sub=currentSubject();
   const key=state.lt.key, kRad=key.phi*Math.PI/180;
   const shOff=key.on?Math.sin(kRad)*Math.max(0,Math.cos(kRad))*-0.3*hpx:0;
   ctx.fillStyle='rgba(0,0,0,.4)';
@@ -905,14 +958,31 @@ function figSoccer(s){
   s.seg(-0.025,0.79,-0.035,0.84,0.055);
   s.ell(-0.04,0.905,0.063,0.077);
 }
+const FIGFN={man:figMan, woman:figWoman, child:figChild};
 const SUBJECTS={
   woman: {name:'Woman',         af:{x:0,    y:0.916,s:0.20},  parts:[{fig:figWoman,dx:0,scale:1}]},
   man:   {name:'Man',           af:{x:0,    y:0.916,s:0.20},  parts:[{fig:figMan,dx:0,scale:1}]},
+  couple:{name:'Couple', af:{x:-0.22,y:0.916,s:0.20}, shadowW:0.42,
+          parts:[{fig:figMan,dx:-0.22,scale:1},{fig:figWoman,dx:0.22,scale:0.95}]},
   family:{name:'Family of three', af:{x:0.005,y:0.487,s:0.12}, shadowW:0.55,
           parts:[{fig:figMan,dx:-0.24,scale:1},{fig:figWoman,dx:0.24,scale:0.94},{fig:figChild,dx:0.005,scale:0.55}]},
+  group: {name:'Build a group…', dynamic:true},
   runner:{name:'Runner (sports)', af:{x:0.135,y:0.895,s:0.18}, shadowW:0.30, parts:[{fig:figRunner,dx:0,scale:1}]},
   soccer:{name:'Soccer player (sports)', af:{x:-0.04,y:0.905,s:0.18}, shadowW:0.34, parts:[{fig:figSoccer,dx:0,scale:1}]},
 };
+// build the parts/af for an arbitrary line-up of up to 4 (man/woman/child)
+function groupLayout(arr){
+  const a=(arr||[]).filter(t=>FIGFN[t]); if(!a.length) a.push('woman');
+  const n=a.length, gap=n<=2?0.46:(n===3?0.42:0.36), span=(n-1)*gap;
+  const parts=a.map((t,i)=>({fig:FIGFN[t], dx:i*gap-span/2, scale:t==='child'?0.56:(t==='man'?1:0.95)}));
+  const focusIdx=Math.max(0,a.findIndex(t=>t!=='child')); // focus the first adult, else first
+  const tgt=parts[focusIdx];
+  return {parts, af:{x:tgt.dx, y:tgt.scale*0.916, s:tgt.scale*0.20}, shadowW:0.16+0.13*n};
+}
+function currentSubject(){
+  if(state.subj==='group') return groupLayout(state.group);
+  return SUBJECTS[state.subj]||SUBJECTS.woman;
+}
 const TEMPS={w:'255,205,150', n:'242,244,248', c:'200,222,255'};
 function drawSubject(cx,fy,h,sub,flip){
   const pc=pcan.getContext('2d');
@@ -943,6 +1013,12 @@ function drawSubject(cx,fy,h,sub,flip){
   pc.globalCompositeOperation='source-atop';
   const anyLight=['key','fill','rim'].some(k=>state.lt[k].on);
   if(!anyLight){
+    // daytime is a giant softbox — lift the silhouette to a midtone with a soft top-down sky fill
+    if(!customBgImg && DAY_SCENES.has(state.scene)){
+      const sky=pc.createLinearGradient(0,fy-h,0,fy);
+      sky.addColorStop(0,'rgba(208,218,230,0.62)'); sky.addColorStop(1,'rgba(150,162,176,0.5)');
+      pc.fillStyle=sky; pc.fillRect(0,0,pcan.width,pcan.height);
+    }
     const rg=pc.createLinearGradient(cx+(maxX-0.36)*h,0,cx+maxX*h,0);
     rg.addColorStop(0,'rgba(245,176,98,0)'); rg.addColorStop(1,'rgba(245,176,98,.28)');
     pc.fillStyle=rg; pc.fillRect(0,0,pcan.width,pcan.height);
@@ -1259,7 +1335,8 @@ $('#shotsStrip').addEventListener('click',e=>{
     const s=shots[i]; if(!s) return;
     customBgImg=null; syncBgChips();
     Object.assign(state,JSON.parse(JSON.stringify(s.state)));
-    render(); toast('Loaded "'+s.name+'"'+(s.custom?' — re-upload its backdrop photo':''));
+    if(!Array.isArray(state.group)) state.group=['man','woman'];
+    renderGroupUI(); render(); toast('Loaded "'+s.name+'"'+(s.custom?' — re-upload its backdrop photo':''));
     return;
   }
   if(act==='del') shots.splice(i,1);
@@ -1356,7 +1433,27 @@ els.hgt.addEventListener('input',e=>{state.hp=+e.target.value/100;render();});
 els.plc.addEventListener('input',e=>{state.px=+e.target.value/100;render();});
 $('#flipBtn').addEventListener('click',()=>{state.fl=!state.fl;render();});
 $('#cam').addEventListener('change',e=>{state.cam=e.target.value;render();});
-$('#subj').addEventListener('change',e=>{state.subj=e.target.value;render();});
+function renderGroupUI(){
+  const show=state.subj==='group';
+  $('#groupCtl').style.display=show?'block':'none';
+  if(!show) return;
+  const g=state.group, opt=(t,v)=>`<option value="${v}"${t===v?' selected':''}>${v[0].toUpperCase()+v.slice(1)}</option>`;
+  $('#groupSlots').innerHTML=g.map((t,i)=>`<span style="display:inline-flex;align-items:center;gap:2px">
+      <select class="mini gtype" data-i="${i}">${['man','woman','child'].map(v=>opt(t,v)).join('')}</select>
+      ${g.length>1?`<button class="gdel" data-rem="${i}" title="Remove" style="background:none;border:0;color:var(--faint);cursor:pointer;font-size:12px;padding:2px 4px">✕</button>`:''}
+    </span>`).join('')
+    +(g.length<4?`<button id="gadd">＋ Add person</button>`:'');
+}
+$('#subj').addEventListener('change',e=>{state.subj=e.target.value;renderGroupUI();render();});
+$('#groupSlots').addEventListener('change',e=>{
+  const s=e.target.closest('.gtype'); if(!s) return;
+  state.group[+s.dataset.i]=s.value; renderGroupUI(); render();
+});
+$('#groupSlots').addEventListener('click',e=>{
+  const rem=e.target.closest('[data-rem]'), add=e.target.closest('#gadd');
+  if(rem){ state.group.splice(+rem.dataset.rem,1); renderGroupUI(); render(); }
+  else if(add && state.group.length<4){ state.group.push('child'); renderGroupUI(); render(); }
+});
 $('#scene').addEventListener('change',e=>{state.scene=e.target.value;render();});
 $('#ar').addEventListener('change',e=>{state.ar=e.target.value;render();});
 $('#orient').addEventListener('click',e=>{const b=e.target.closest('button');if(b){state.o=b.dataset.o;render();}});
@@ -1382,8 +1479,12 @@ $('#tglHud').addEventListener('change',e=>{state.hud=e.target.checked;render();}
 // presets
 const PHOTO_PRESETS=[
   {n:'Classic portrait', v:{cam:'ff',f:85,N:1.8,s:2.5,b:18,o:'l',subj:'woman',scene:'city',ls:'none'}},
+  {n:'Sunny portrait',   v:{cam:'ff',f:85,N:2,s:2.5,b:18,o:'p',subj:'woman',scene:'meadow',ls:'none'}},
+  {n:'Couple — park',    v:{cam:'ff',f:85,N:2,s:3,b:22,o:'l',subj:'couple',scene:'meadow',ls:'none'}},
+  {n:'Group of four',    v:{cam:'ff',f:50,N:4,s:5,b:30,o:'l',subj:'group',grp:['man','woman','child','child'],scene:'meadow',ls:'none'}},
+  {n:'Overcast headshot',v:{cam:'ff',f:135,N:2,s:2,b:9,o:'p',subj:'woman',scene:'overcast',ls:'none'}},
+  {n:'Day street',       v:{cam:'apsc',f:35,N:8,s:4,b:30,o:'l',subj:'man',scene:'urbanday',ls:'none',px:-0.3}},
   {n:'Golden hour',      v:{cam:'ff',f:135,N:2,s:3,b:25,o:'p',subj:'woman',scene:'forest',ls:'backlit'}},
-  {n:'Street f/8',       v:{cam:'apsc',f:23,N:8,s:4,b:30,o:'l',subj:'man',scene:'city',ls:'none',px:-0.3}},
   {n:'Family beach',     v:{cam:'ff',f:35,N:2.8,s:4,b:40,o:'l',subj:'family',scene:'beach',ls:'none'}},
   {n:'Studio 3-point',   v:{cam:'ff',f:85,N:4,s:2.2,b:6,o:'p',subj:'woman',scene:'studio',ls:'3point'}},
   {n:'Neon portrait',    v:{cam:'ff',f:50,N:1.4,s:2,b:7,o:'p',subj:'man',scene:'neon',ls:'backlit',px:-0.25}},
@@ -1393,6 +1494,7 @@ const PHOTO_PRESETS=[
 ];
 const CINE_PRESETS=[
   {n:'Interview',        v:{cam:'s35',f:50,N:2.8,s:1.8,b:5,ar:'1.78',subj:'man',scene:'studio',ls:'keyfill',px:-0.22}},
+  {n:'Daylight ext.',    v:{cam:'s35',f:32,N:4,s:4,b:40,ar:'2.39',subj:'couple',scene:'meadow',ls:'none'}},
   {n:'Anamorphic night', v:{cam:'lf',f:75,N:2,s:3,b:20,ar:'2.39',subj:'woman',scene:'city',ls:'3point'}},
   {n:'Neon noir',        v:{cam:'lf',f:50,N:2,s:2.5,b:7,ar:'2.39',subj:'man',scene:'neon',ls:'backlit',px:-0.38}},
   {n:'Soundstage',       v:{cam:'s35',f:35,N:2.8,s:2.2,b:5,ar:'1.85',subj:'woman',scene:'studio',ls:'3point'}},
@@ -1405,9 +1507,11 @@ $('#presets').addEventListener('click',e=>{
   const list=state.mode==='cine'?CINE_PRESETS:PHOTO_PRESETS;
   const p=list[+b.dataset.i]; if(!p) return;
   const v={px:0,fl:false,...p.v};
-  const {ls,...rest}=v;
+  const {ls,grp,...rest}=v;
   Object.assign(state,rest);
+  if(grp) state.group=grp.slice(0,4);
   applyScheme(ls||'none');
+  renderGroupUI();
   render();
 });
 
@@ -1425,7 +1529,7 @@ function queueHash(){
     const p=new URLSearchParams({mode:state.mode,cam:state.cam,o:state.o,ar:state.ar,
       f:state.f.toFixed(1),N:state.N,s:state.s.toFixed(2),b:state.b.toFixed(1),hp:state.hp,
       px:state.px.toFixed(2),fl:state.fl?1:0,
-      subj:state.subj,scene:state.scene,ls:state.ls});
+      subj:state.subj,grp:state.group.join('-'),scene:state.scene,ls:state.ls});
     history.replaceState(null,'','#'+p.toString());
   },300);
 }
@@ -1437,6 +1541,7 @@ function readHash(){
   if(p.get('o')==='p'||p.get('o')==='l') state.o=p.get('o');
   if(p.get('ar')&&ASPECTS.some(a=>a.id===p.get('ar'))) state.ar=p.get('ar');
   if(p.get('subj')&&SUBJECTS[p.get('subj')]) state.subj=p.get('subj');
+  if(p.get('grp')){ const g=p.get('grp').split('-').filter(t=>FIGFN[t]); if(g.length) state.group=g.slice(0,4); }
   if(p.get('scene')&&SCENES.some(s=>s.id===p.get('scene'))) state.scene=p.get('scene');
   if(p.get('ls')&&SCHEMES.some(s=>s.id===p.get('ls'))&&p.get('ls')!=='custom') applyScheme(p.get('ls'));
   if(p.get('fl')==='1') state.fl=true;
@@ -1522,6 +1627,7 @@ readHash();
 populateSensors();
 populatePresets();
 renderShots();
+renderGroupUI();
 syncBgChips();
 applyTheme(curTheme(),false);
 if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }catch(e){} }
