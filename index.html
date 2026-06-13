@@ -155,6 +155,10 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
   main{grid-template-columns:1fr}
   #stage{order:-1}
 }
+@media (max-width:700px){
+  /* phones: stacked layout — the frame just fills the width at every size */
+  body.vf-s canvas#vf, body.vf-m canvas#vf, body.vf-l canvas#vf{max-width:96cqw;max-height:70vh}
+}
 @media (max-width:640px){
   header{flex-wrap:wrap;gap:10px;padding:14px 14px 4px}
   .tagline{display:none}
