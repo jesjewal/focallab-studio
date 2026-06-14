@@ -252,11 +252,6 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
     <div class="card">
       <h2>Scene</h2>
       <div class="ctl">
-        <div class="row"><label>People</label><span class="val" id="peopleCount"></span></div>
-        <div id="peopleList"></div>
-        <div class="chips" style="margin-top:2px"><button id="addPerson">＋ Add person</button></div>
-      </div>
-      <div class="ctl">
         <div class="row"><label for="scene">Location</label></div>
         <select id="scene" aria-label="Location"></select>
       </div>
@@ -267,10 +262,15 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
         </div>
         <input type="file" id="bgFile" hidden accept="image/*">
       </div>
+      <div class="ctl">
+        <div class="row"><label>People</label><span class="val" id="peopleCount"></span></div>
+        <div id="peopleList"></div>
+        <div class="chips" style="margin-top:2px"><button id="addPerson">＋ Add person</button></div>
+      </div>
       <div class="duo">
         <div class="ctl">
-          <div class="row"><label for="dist">Focus</label><span class="val" id="distV"></span></div>
-          <input type="range" id="dist" min="0" max="1000" step="1" aria-label="Distance to subject">
+          <div class="row"><label for="dist">Camera</label><span class="val" id="distV"></span></div>
+          <input type="range" id="dist" min="0" max="1000" step="1" aria-label="Camera distance to subject">
         </div>
         <div class="ctl">
           <div class="row"><label for="bgd">Background</label><span class="val" id="bgdV"></span></div>
