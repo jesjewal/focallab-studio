@@ -415,7 +415,7 @@ const ASPECTS=[
 // ---------- state ----------
 const F_STOPS=[0.95,1.0,1.1,1.2,1.4,1.6,1.8,2,2.2,2.5,2.8,3.2,3.5,4,4.5,5,5.6,6.3,7.1,8,9,10,11,13,14,16,18,20,22,25,29,32];
 const state={mode:'photo', cam:'ff', o:'l', ar:'2.39', f:85, N:1.8, s:2.5, b:18,
-  people:[{t:'woman',skin:'medium',x:0,h:1.65,c:'#3f6fa6',hair:'#241a12'}],
+  people:[{t:'woman',skin:'medium',x:0,h:1.65,c:'#c2566f',hair:'#241a12'}],
   scene:'city', lights:true, grid:false, hud:true,
   ls:'none',
   lt:{key: {on:false, phi:-40, d:1.8, i:75, t:'w'},
@@ -966,7 +966,15 @@ const SKINS=[
   {id:'brown', name:'Brown',  c:'#7d4c2b'},
   {id:'deep',  name:'Deep',   c:'#512f18'},
 ];
-const CLOTHES=['#3f6fa6','#a23b4b','#3f7d5a','#6a4d8f','#b9772e','#41757e','#8a4f8c','#4a525e'];
+// four distinct clothing colours per type, so up to four of the same type read differently
+const TYPE_CLOTHES={
+  man:   ['#3a6ea5','#46637d','#5a6b3c','#8a4a30'],   // blue, slate, olive, rust
+  woman: ['#c2566f','#d9824e','#8a5aa6','#3f9a8f'],   // rose, coral, plum, teal
+  child: ['#e0913a','#4aa3c2','#7bbf5a','#d2607a'],   // orange, sky, green, pink
+  runner:['#d8443a','#2f7fd0','#2fa84f','#e0a52f'],   // athletic kit colours
+  soccer:['#d8443a','#2f7fd0','#2fa84f','#e0a52f'],
+};
+function clothFor(t,n){ const pal=TYPE_CLOTHES[t]||TYPE_CLOTHES.man; return pal[((n%4)+4)%4]; }
 const HAIRS=['#241a12','#100e0c','#5a3c22','#7a5634','#9aa0a6'];
 const TYPEFIG={man:figMan,woman:figWoman,child:figChild,runner:figRunner,soccer:figSoccer};
 const DEFH={man:1.78,woman:1.65,child:1.1,runner:1.78,soccer:1.78};  // default heights, metres
@@ -975,14 +983,16 @@ const TYPEAFX={man:0,woman:0,child:0,runner:0.135,soccer:-0.04};
 function skinC(id){const s=SKINS.find(x=>x.id===id);return s?s.c:SKINS[2].c;}
 function normPeople(arr){
   const a=(arr&&arr.length?arr:[{t:'woman'}]).slice(0,4);
+  const cnt={};
   return a.map((p,i)=>{
     const t=PTYPES.some(x=>x.id===p.t)?p.t:'woman';
+    const n=(cnt[t]=(cnt[t]||0)+1)-1;   // ordinal among same-type people → distinct colour each
     return {
       t,
       skin:SKINS.some(x=>x.id===p.skin)?p.skin:SKINS[i%SKINS.length].id,
       x:Math.max(-6,Math.min(6,isFinite(+p.x)?+p.x:0)),  // lateral metres from the optical axis
       h:Math.max(0.6,Math.min(2.1,isFinite(+p.h)?+p.h:DEFH[t])),  // height, metres
-      c:p.c||CLOTHES[i%CLOTHES.length],
+      c:p.c||clothFor(t,n),
       hair:p.hair||HAIRS[i%HAIRS.length]
     };
   });
@@ -1001,10 +1011,11 @@ function ensurePeople(st){
 function addPerson(){
   if(state.people.length>=4) return;
   const i=state.people.length, defX=[0,0.7,-0.7,1.2][i]||0;  // metres
-  state.people.push({t:'woman',skin:SKINS[i%SKINS.length].id,x:defX,h:DEFH.woman,c:CLOTHES[i%CLOTHES.length],hair:HAIRS[i%HAIRS.length]});
+  const n=state.people.filter(p=>p.t==='woman').length;       // distinct feminine colour
+  state.people.push({t:'woman',skin:SKINS[i%SKINS.length].id,x:defX,h:DEFH.woman,c:clothFor('woman',n),hair:HAIRS[i%HAIRS.length]});
 }
 function drawPeople(W,H,fy,ppmS){
-  const people=state.people.length?state.people:[{t:'woman',skin:'medium',x:0,h:DEFH.woman,c:CLOTHES[0],hair:HAIRS[0]}];
+  const people=state.people.length?state.people:[{t:'woman',skin:'medium',x:0,h:DEFH.woman,c:clothFor('woman',0),hair:HAIRS[0]}];
   // people stand at fixed lateral metres; each has its own height (metres) → pixels via ppmS.
   // zooming in grows ppmS, so edge people slide out of frame instead of moving — operator must recompose.
   const ph=p=>(p.h||DEFH[p.t]||1.7);
@@ -1024,7 +1035,7 @@ function drawPeople(W,H,fy,ppmS){
   for(const p of people){
     const hh=ph(p)*ppmS, ox=px(p); refHH=Math.max(refHH,hh);
     const X=x=>ox+x*hh, Y=y=>fy-y*hh;
-    const skinCol=skinC(p.skin), clothCol=p.c||CLOTHES[0], hairCol=p.hair||HAIRS[0];
+    const skinCol=skinC(p.skin), clothCol=p.c||clothFor(p.t,0), hairCol=p.hair||HAIRS[0];
     const set=c=>{pc.fillStyle=c;pc.strokeStyle=c;};
     const s={
       seg:(x1,y1,x2,y2,w)=>{pc.beginPath();pc.moveTo(X(x1),Y(y1));pc.lineTo(X(x2),Y(y2));pc.lineWidth=w*hh;pc.stroke();},
@@ -1490,7 +1501,10 @@ function renderPeople(){
 }
 $('#peopleList').addEventListener('change',e=>{
   const t=e.target.closest('.ptype'), sk=e.target.closest('.pskin');
-  if(t){ const p=state.people[+t.dataset.i]; p.t=t.value; p.h=DEFH[t.value]||p.h; renderPeople(); render(); }
+  if(t){ const i=+t.dataset.i, p=state.people[i], nt=t.value;
+    const n=state.people.filter((q,qi)=>qi<i&&q.t===nt).length; // distinct colour vs earlier same-type
+    p.t=nt; p.h=DEFH[nt]||p.h; p.c=clothFor(nt,n);
+    renderPeople(); render(); }
   else if(sk){ state.people[+sk.dataset.i].skin=sk.value; renderPeople(); render(); }
 });
 $('#peopleList').addEventListener('input',e=>{
