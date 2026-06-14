@@ -458,6 +458,9 @@ const SCENES=[
   {id:'forest',  name:'Forest — golden hour'},
   {id:'beach',   name:'Beach — sunset'},
   {id:'stadium', name:'Stadium — night match'},
+  {id:'basketball',name:'Basketball arena — indoor'},
+  {id:'theater', name:'Theater stage — indoor'},
+  {id:'festival',name:'Festival stage — night'},
   {id:'neon',    name:'Neon street — night'},
   {id:'studio',  name:'Soundstage — studio'},
 ];
@@ -663,6 +666,58 @@ function genWorldFor(scene){
     for(let i=0;i<8;i++) w.bgSil.push({t:'blob',x:-34+r()*68,y:0.5+r()*0.5,rx:1+r()*1.3,ry:0.6+r()*0.4,c:'#4c5e4a'});
     // overcast = diffuse, almost no specular bokeh
     for(let i=0;i<14;i++) w.bgLights.push({x:-26+r()*52,y:1+r()*4,c:'#f0f4f6',phys:0.05});
+  }
+
+  else if(scene==='basketball'){ // indoor arena, bright
+    w.palette={sky:[[0,'#1a1e26'],[0.34,'#262b34'],[0.52,'#343b45']],
+      glow:{x:0.5,c:'255,250,235',a:0.16,r:0.55},
+      ground:[[0,'#b88a4e'],[0.2,'#9a6f3c'],[0.6,'#7a572e'],[1,'#5a3f20']]};
+    // stands + crowd
+    w.bgSil.push({t:'rect',x:-60,y:0,w:120,h:1.2,c:'#1b212c'});
+    w.bgSil.push({t:'rect',x:-60,y:1.2,w:120,h:9,c:'#222936'});
+    for(let y=1.6;y<9.4;y+=0.6)
+      for(let x=-46;x<46;x+=1.1){ if(r()<0.5) continue;
+        const c=r()<.85?pick(['#cfd8e8','#ffe2b8','#dfe8ff','#c8ccd8']):pick(['#ff7b6b','#5aa9ff','#ffd86b']);
+        w.bgLights.push({x:x+r()*.6,y:y+r()*.35,c,phys:0.11}); }
+    // ceiling light banks (rows of bright lamps up high)
+    for(let row=0;row<2;row++) for(let x=-40;x<40;x+=5) w.bgLights.push({x:x+r()*.4,y:10.6+row*1.0,c:'#fbfdff',phys:0.5});
+    // backboard + hoop (offset so it enters tighter frames)
+    w.bgSil.push({t:'rect',x:1.4,y:3.05,w:1.8,h:1.05,c:'#dfe6ee'});
+    w.bgLights.push({x:2.3,y:3.05,c:'#ff8a3a',phys:0.22}); // rim
+    // far skyline outside = none (indoor)
+  }
+
+  else if(scene==='theater'){ // indoor stage — dramatic lighting
+    w.palette={sky:[[0,'#08070b'],[0.46,'#0d0b12'],[0.6,'#0a0810']],
+      glow:{x:0.5,c:'255,210,150',a:0.20,r:0.42},
+      ground:[[0,'#241a14'],[0.4,'#15100c'],[1,'#0a0806']]};
+    // cyclorama wall with a colour wash
+    w.bgSil.push({t:'rect',x:-60,y:0,w:120,h:11,c:'#161a33'});
+    for(let i=0;i<7;i++) w.bgSil.push({t:'blob',x:-34+r()*68,y:3+r()*5,rx:5+r()*4,ry:3+r()*2,c:pick(['#26204a','#3a1f44','#1f3450'])});
+    // overhead spot bar — warm pools + a few colour gels
+    for(let x=-30;x<=30;x+=5) w.bgLights.push({x:x+(r()-.5),y:9.5+r()*0.5,c:r()<.7?'#ffd9a0':pick(['#ff5ad2','#5aa9ff','#ffd23a']),phys:0.30});
+    // footlights along the stage lip
+    for(let x=-28;x<=28;x+=2.2) w.bgLights.push({x:x+(r()-.5)*.3,y:0.25+r()*0.1,c:'#ffcaa0',phys:0.16});
+    // side booms
+    for(const bx of [-34,34]) for(let y=1.5;y<6;y+=1.3) w.bgLights.push({x:bx,y,c:pick(['#9fc8ff','#ffd9a0']),phys:0.4});
+  }
+
+  else if(scene==='festival'){ // outdoor night stage
+    w.palette={sky:[[0,'#05070f'],[0.4,'#0a0f1e'],[0.55,'#141a30'],[0.62,'#0a0d16']],
+      glow:{x:0.5,c:'180,120,255',a:0.18,r:0.5},
+      ground:[[0,'#0e1018'],[0.3,'#0a0c12'],[1,'#05060a']]};
+    addStars(16);
+    // truss towers + top truss
+    for(const tx of [-13,13]) w.bgSil.push({t:'rect',x:tx-0.4,y:0,w:0.8,h:14,c:'#0a0d14'});
+    w.bgSil.push({t:'rect',x:-13,y:13.4,w:26,h:0.8,c:'#0a0d14'});
+    // LED wall behind the stage
+    w.bgSil.push({t:'rect',x:-9,y:2,w:18,h:9,c:'#10183a'});
+    for(let y=2.4;y<10.6;y+=0.9) for(let x=-8;x<8;x+=1.0)
+      w.bgLights.push({x:x+r()*.3,y:y+r()*.3,c:pick(['#3ad2ff','#ff4fd8','#7bff9e','#ffd23a','#b46bff']),phys:0.14,dim:true});
+    // PAR-can colour wash across the top truss
+    for(let x=-12;x<=12;x+=1.6) w.bgLights.push({x,y:13.0,c:pick(['#ff4fd8','#3ad2ff','#7bff9e','#ffd23a']),phys:0.42});
+    // crowd hands/phones at the base
+    for(let i=0;i<120;i++) w.bgLights.push({x:-40+r()*80,y:0.2+r()*1.4,c:r()<.7?'#cdd6e6':pick(['#ffd86b','#ff7b6b']),phys:0.07});
   }
   return w;
 }
@@ -955,9 +1010,78 @@ function figSoccer(s){
   s.seg(-0.025,0.79,-0.035,0.84,0.055);
   s.head(-0.04,0.905,0.063,0.077,'short');
 }
+function figPerformer(s){ // singer at a mic stand
+  s.col('#23262c'); s.seg(0.16,0,0.16,0.9,0.013); s.col('#15171c'); s.dot(0.085,0.94,0.024); // stand + mic at mouth
+  s.cloth();
+  s.ell(-0.05,0.022,0.05,0.024); s.ell(0.08,0.022,0.05,0.024);
+  s.seg(-0.04,0.49,-0.05,0.04,0.072); s.seg(0.05,0.49,0.085,0.04,0.072);
+  s.seg(0,0.51,0,0.60,0.19);
+  s.seg(0,0.58,0,0.775,0.15);
+  s.seg(-0.092,0.782,0.092,0.782,0.07);
+  s.seg(-0.10,0.772,-0.145,0.62,0.05); s.seg(-0.145,0.62,-0.16,0.47,0.04);     // free arm out
+  s.seg(0.10,0.775,0.12,0.86,0.05); s.seg(0.12,0.86,0.10,0.93,0.042);          // mic arm up
+  s.skin(); s.dot(-0.163,0.46,0.028); s.dot(0.097,0.935,0.026);
+  s.seg(0,0.80,0,0.845,0.052);
+  s.head(0,0.916,0.06,0.075,'short');
+}
+function figBasketball(s){ // shooting pose, ball overhead
+  s.cloth();
+  s.ell(-0.07,0.022,0.052,0.024); s.ell(0.07,0.022,0.052,0.024);
+  s.seg(-0.05,0.45,-0.07,0.04,0.072); s.seg(0.05,0.45,0.075,0.04,0.072);
+  s.seg(0,0.46,0,0.57,0.20);
+  s.seg(0,0.55,0,0.74,0.15);
+  s.seg(-0.088,0.748,0.088,0.748,0.066);
+  s.seg(-0.10,0.745,-0.06,0.90,0.05); s.seg(-0.06,0.90,0.01,0.99,0.042);
+  s.seg(0.10,0.745,0.10,0.90,0.05);  s.seg(0.10,0.90,0.05,0.99,0.042);
+  s.skin(); s.dot(0.0,1.0,0.026); s.dot(0.06,1.0,0.026);
+  s.seg(0,0.755,0,0.80,0.05);
+  s.head(0,0.87,0.058,0.072,'short');
+  s.col('#d8743a'); s.dot(0.03,1.06,0.058); s.col('#9c4f24'); s.dot(0.03,1.06,0.03);  // ball
+}
+function figCyclist(s){ // side view on a bike
+  s.col('#16181d'); s.dot(-0.3,0.17,0.17); s.dot(0.3,0.17,0.17);
+  s.col('#080a0e'); s.dot(-0.3,0.17,0.095); s.dot(0.3,0.17,0.095);
+  s.col('#2c3037');
+  s.seg(0.0,0.17,-0.02,0.5,0.022); s.seg(0.0,0.17,0.26,0.42,0.022); s.seg(-0.02,0.5,0.26,0.42,0.02);
+  s.seg(0.26,0.42,0.3,0.17,0.018); s.seg(-0.3,0.17,0.0,0.17,0.018); s.seg(-0.3,0.17,-0.02,0.5,0.016);
+  s.seg(0.26,0.42,0.24,0.56,0.016);
+  s.cloth();
+  s.seg(-0.02,0.5,0.07,0.30,0.05); s.seg(0.07,0.30,0.0,0.18,0.04);
+  s.seg(-0.02,0.5,0.10,0.74,0.13);
+  s.seg(0.10,0.74,0.24,0.58,0.05);
+  s.skin(); s.dot(0.25,0.57,0.026);
+  s.seg(0.10,0.75,0.16,0.80,0.045);
+  s.head(0.18,0.85,0.055,0.066,'short');
+}
+function figDog(s){ // side view; fur = clothing colour, skin tone n/a
+  s.cloth();
+  s.seg(-0.26,0.52,0.22,0.54,0.30);                    // body
+  s.seg(-0.2,0.42,-0.2,0.05,0.06); s.seg(-0.1,0.42,-0.1,0.05,0.06);
+  s.seg(0.12,0.42,0.12,0.05,0.06); s.seg(0.04,0.42,0.04,0.05,0.06);
+  s.seg(-0.26,0.56,-0.42,0.72,0.045);                  // tail
+  s.seg(0.2,0.56,0.34,0.74,0.10);                      // neck
+  s.ell(0.4,0.78,0.092,0.078);                         // head
+  s.seg(0.45,0.8,0.53,0.76,0.05);                      // snout
+  s.seg(0.36,0.86,0.33,0.95,0.035);                    // ear
+  s.col('#0c0e12'); s.dot(0.52,0.75,0.018);            // nose
+}
+function figSeated(s){ // person on a stool
+  s.col('#23262c'); s.seg(-0.12,0,-0.12,0.32,0.022); s.seg(0.12,0,0.12,0.32,0.022); s.seg(-0.15,0.33,0.15,0.33,0.03);
+  s.cloth();
+  s.seg(0.0,0.40,0.22,0.41,0.10); s.seg(0.22,0.41,0.25,0.06,0.062); s.ell(0.28,0.04,0.052,0.022);  // near leg
+  s.seg(0.0,0.40,0.18,0.40,0.088); s.seg(0.18,0.40,0.2,0.06,0.055); s.ell(0.23,0.04,0.05,0.022);   // far leg
+  s.seg(0.0,0.40,0.0,0.72,0.16);
+  s.seg(-0.088,0.73,0.088,0.73,0.062);
+  s.seg(-0.095,0.72,-0.04,0.50,0.05); s.seg(0.095,0.72,0.17,0.47,0.05);
+  s.skin(); s.dot(-0.04,0.49,0.026); s.dot(0.18,0.46,0.026);
+  s.seg(0,0.74,0,0.785,0.05);
+  s.head(0,0.855,0.058,0.072,'short');
+}
 const TEMPS={w:'255,205,150', n:'242,244,248', c:'200,222,255'};
 // ---- people roster: each person has a type, skin tone, and horizontal position ----
-const PTYPES=[{id:'woman',name:'Woman'},{id:'man',name:'Man'},{id:'child',name:'Child'},{id:'runner',name:'Runner'},{id:'soccer',name:'Soccer player'}];
+const PTYPES=[{id:'woman',name:'Woman'},{id:'man',name:'Man'},{id:'child',name:'Child'},
+  {id:'runner',name:'Runner'},{id:'soccer',name:'Soccer player'},{id:'basketball',name:'Basketball player'},
+  {id:'performer',name:'Performer'},{id:'cyclist',name:'Cyclist'},{id:'seated',name:'Seated person'},{id:'dog',name:'Dog'}];
 const SKINS=[
   {id:'light', name:'Light',  c:'#f1c9a5'},
   {id:'fair',  name:'Fair',   c:'#e3ad82'},
@@ -973,13 +1097,22 @@ const TYPE_CLOTHES={
   child: ['#e0913a','#4aa3c2','#7bbf5a','#d2607a'],   // orange, sky, green, pink
   runner:['#d8443a','#2f7fd0','#2fa84f','#e0a52f'],   // athletic kit colours
   soccer:['#d8443a','#2f7fd0','#2fa84f','#e0a52f'],
+  basketball:['#d8443a','#2f7fd0','#e0a52f','#6a3fb0'],
+  performer:['#2a2333','#7a2f4a','#15171c','#c5a23a'], // stage: dark, burgundy, black, gold
+  cyclist:['#d8443a','#2f7fd0','#2fa84f','#e0a52f'],
+  seated:['#46637d','#7a4a32','#5a6b3c','#8a5aa6'],
+  dog:['#8a6b4a','#3a3330','#c8a878','#5a4636'],       // fur tones
 };
 function clothFor(t,n){ const pal=TYPE_CLOTHES[t]||TYPE_CLOTHES.man; return pal[((n%4)+4)%4]; }
 const HAIRS=['#241a12','#100e0c','#5a3c22','#7a5634','#9aa0a6'];
-const TYPEFIG={man:figMan,woman:figWoman,child:figChild,runner:figRunner,soccer:figSoccer};
-const DEFH={man:1.78,woman:1.65,child:1.1,runner:1.78,soccer:1.78};  // default heights, metres
-const TYPEAFY={man:0.916,woman:0.916,child:0.885,runner:0.895,soccer:0.905};
-const TYPEAFX={man:0,woman:0,child:0,runner:0.135,soccer:-0.04};
+const TYPEFIG={man:figMan,woman:figWoman,child:figChild,runner:figRunner,soccer:figSoccer,
+  basketball:figBasketball,performer:figPerformer,cyclist:figCyclist,seated:figSeated,dog:figDog};
+const DEFH={man:1.78,woman:1.65,child:1.1,runner:1.78,soccer:1.78,
+  basketball:1.95,performer:1.72,cyclist:1.45,seated:1.3,dog:0.6};  // default heights, metres
+const TYPEAFY={man:0.916,woman:0.916,child:0.885,runner:0.895,soccer:0.905,
+  basketball:0.87,performer:0.916,cyclist:0.85,seated:0.855,dog:0.78};
+const TYPEAFX={man:0,woman:0,child:0,runner:0.135,soccer:-0.04,
+  basketball:0,performer:0,cyclist:0.18,seated:0,dog:0.4};
 function skinC(id){const s=SKINS.find(x=>x.id===id);return s?s.c:SKINS[2].c;}
 function normPeople(arr){
   const a=(arr&&arr.length?arr:[{t:'woman'}]).slice(0,4);
@@ -1559,6 +1692,8 @@ const PHOTO_PRESETS=[
   {n:'Studio 3-point',   v:{cam:'ff',f:85,N:4,s:2.2,b:6,o:'p',ppl:[{t:'woman',skin:'medium'}],scene:'studio',ls:'3point'}},
   {n:'Neon portrait',    v:{cam:'ff',f:50,N:1.4,s:2,b:7,o:'p',ppl:[{t:'man',skin:'brown',x:-0.5}],scene:'neon',ls:'backlit'}},
   {n:'Sports 400',       v:{cam:'ff',f:400,N:2.8,s:30,b:55,o:'l',ppl:[{t:'soccer',skin:'deep'}],scene:'stadium',ls:'none'}},
+  {n:'Basketball',       v:{cam:'ff',f:135,N:2.8,s:8,b:22,o:'l',ppl:[{t:'basketball',skin:'deep'}],scene:'basketball',ls:'none'}},
+  {n:'On stage',         v:{cam:'ff',f:85,N:2,s:5,b:14,o:'p',ppl:[{t:'performer',skin:'fair'}],scene:'theater',ls:'3point'}},
   {n:'Flash snapshot',   v:{cam:'ph13',f:6.9,N:1.8,s:2.5,b:16,o:'p',ppl:[{t:'man',skin:'fair',x:-0.45},{t:'woman',skin:'medium',x:0.45}],scene:'city',ls:'flash'}},
   {n:'Landscape',        v:{cam:'ff',f:24,N:11,s:8,b:900,o:'l',ppl:[{t:'man',skin:'medium',x:1.6}],scene:'beach',ls:'none'}},
 ];
@@ -1569,6 +1704,7 @@ const CINE_PRESETS=[
   {n:'Neon noir',        v:{cam:'lf',f:50,N:2,s:2.5,b:7,ar:'2.39',ppl:[{t:'man',skin:'brown',x:-0.7}],scene:'neon',ls:'backlit'}},
   {n:'Soundstage',       v:{cam:'s35',f:35,N:2.8,s:2.2,b:5,ar:'1.85',ppl:[{t:'woman',skin:'medium'}],scene:'studio',ls:'3point'}},
   {n:'Stadium hero',     v:{cam:'vv',f:135,N:2,s:12,b:45,ar:'2.39',ppl:[{t:'runner',skin:'deep',x:1.2}],scene:'stadium',ls:'backlit'}},
+  {n:'Festival',         v:{cam:'lf',f:50,N:2,s:4,b:14,ar:'2.39',ppl:[{t:'performer',skin:'tan'}],scene:'festival',ls:'backlit'}},
   {n:'Beach wide',       v:{cam:'a65',f:40,N:2.8,s:4,b:60,ar:'2.00',ppl:[{t:'man',skin:'tan',x:-0.7},{t:'woman',skin:'medium',x:0.7},{t:'child',skin:'medium',x:0}],scene:'beach',ls:'none'}},
   {n:'Doc handheld',     v:{cam:'s16',f:12,N:2,s:2,b:12,ar:'1.78',ppl:[{t:'man',skin:'medium'}],scene:'forest',ls:'none'}},
 ];
