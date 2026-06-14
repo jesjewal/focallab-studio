@@ -104,8 +104,8 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .prow .swatch{width:15px;height:15px;border-radius:50%;border:1px solid var(--line-2);flex:none}
 .prow .pdel{background:none;border:0;color:var(--faint);cursor:pointer;font-size:13px;padding:0 2px}
 .prow .pdel:hover{color:var(--hot)}
-.prow .ppos{flex:1;height:18px}
-.prow .ppos::-webkit-slider-thumb{width:13px;height:13px;margin-top:-4px}
+.prow .ppos,.prow .phgt{flex:1;height:18px}
+.prow .ppos::-webkit-slider-thumb,.prow .phgt::-webkit-slider-thumb{width:13px;height:13px;margin-top:-4px}
 #ovh{margin-top:4px}
 #ovh svg{display:block;width:100%;height:auto;touch-action:none;border-radius:12px;background:var(--panel-2);border:1px solid var(--line-2)}
 #stage{container-type:inline-size}
@@ -277,10 +277,6 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
           <input type="range" id="bgd" min="0" max="1000" step="1" aria-label="Distance to background">
         </div>
       </div>
-      <div class="ctl">
-        <div class="row"><label for="hgt">Subject height</label><span class="val" id="hgtV"></span></div>
-        <input type="range" id="hgt" min="140" max="210" step="1" aria-label="Subject height">
-      </div>
     </div>
 
   </aside>
@@ -418,8 +414,8 @@ const ASPECTS=[
 
 // ---------- state ----------
 const F_STOPS=[0.95,1.0,1.1,1.2,1.4,1.6,1.8,2,2.2,2.5,2.8,3.2,3.5,4,4.5,5,5.6,6.3,7.1,8,9,10,11,13,14,16,18,20,22,25,29,32];
-const state={mode:'photo', cam:'ff', o:'l', ar:'2.39', f:85, N:1.8, s:2.5, b:18, hp:1.75,
-  people:[{t:'woman',skin:'medium',x:0,c:'#3f6fa6',hair:'#241a12'}],
+const state={mode:'photo', cam:'ff', o:'l', ar:'2.39', f:85, N:1.8, s:2.5, b:18,
+  people:[{t:'woman',skin:'medium',x:0,h:1.65,c:'#3f6fa6',hair:'#241a12'}],
   scene:'city', lights:true, grid:false, hud:true,
   ls:'none',
   lt:{key: {on:false, phi:-40, d:1.8, i:75, t:'w'},
@@ -870,13 +866,13 @@ function drawScene(res){
     }
   }
 
-  // subject plane — a roster of people, each at its own horizontal position
-  const ppmS=ppm(state.s), fy=groundY(state.s), hpx=state.hp*ppmS;
+  // subject plane — a roster of people, each at its own height & horizontal position
+  const ppmS=ppm(state.s), fy=groundY(state.s);
   if(!customBgImg&&state.scene==='stadium'){
     ctx.strokeStyle='rgba(210,230,215,.28)'; ctx.lineWidth=Math.max(0.06*ppmS,1);
     ctx.beginPath(); ctx.ellipse(W/2,fy,3.4*ppmS,0.17*ppmS,0,0,7); ctx.stroke();
   }
-  const af=drawPeople(W,H,fy,hpx);
+  const af=drawPeople(W,H,fy,ppmS);
 
   // HUD
   vignette(W,H);
@@ -973,19 +969,23 @@ const SKINS=[
 const CLOTHES=['#3f6fa6','#a23b4b','#3f7d5a','#6a4d8f','#b9772e','#41757e','#8a4f8c','#4a525e'];
 const HAIRS=['#241a12','#100e0c','#5a3c22','#7a5634','#9aa0a6'];
 const TYPEFIG={man:figMan,woman:figWoman,child:figChild,runner:figRunner,soccer:figSoccer};
-const TYPESCALE={man:1,woman:0.96,child:0.56,runner:1,soccer:1};
+const DEFH={man:1.78,woman:1.65,child:1.1,runner:1.78,soccer:1.78};  // default heights, metres
 const TYPEAFY={man:0.916,woman:0.916,child:0.885,runner:0.895,soccer:0.905};
 const TYPEAFX={man:0,woman:0,child:0,runner:0.135,soccer:-0.04};
 function skinC(id){const s=SKINS.find(x=>x.id===id);return s?s.c:SKINS[2].c;}
 function normPeople(arr){
   const a=(arr&&arr.length?arr:[{t:'woman'}]).slice(0,4);
-  return a.map((p,i)=>({
-    t:PTYPES.some(x=>x.id===p.t)?p.t:'woman',
-    skin:SKINS.some(x=>x.id===p.skin)?p.skin:SKINS[i%SKINS.length].id,
-    x:Math.max(-6,Math.min(6,isFinite(+p.x)?+p.x:0)),  // lateral metres from the optical axis
-    c:p.c||CLOTHES[i%CLOTHES.length],
-    hair:p.hair||HAIRS[i%HAIRS.length]
-  }));
+  return a.map((p,i)=>{
+    const t=PTYPES.some(x=>x.id===p.t)?p.t:'woman';
+    return {
+      t,
+      skin:SKINS.some(x=>x.id===p.skin)?p.skin:SKINS[i%SKINS.length].id,
+      x:Math.max(-6,Math.min(6,isFinite(+p.x)?+p.x:0)),  // lateral metres from the optical axis
+      h:Math.max(0.6,Math.min(2.1,isFinite(+p.h)?+p.h:DEFH[t])),  // height, metres
+      c:p.c||CLOTHES[i%CLOTHES.length],
+      hair:p.hair||HAIRS[i%HAIRS.length]
+    };
+  });
 }
 function ensurePeople(st){
   if(Array.isArray(st.people)&&st.people.length){ st.people=normPeople(st.people); return; }
@@ -1001,28 +1001,28 @@ function ensurePeople(st){
 function addPerson(){
   if(state.people.length>=4) return;
   const i=state.people.length, defX=[0,0.7,-0.7,1.2][i]||0;  // metres
-  state.people.push({t:'woman',skin:SKINS[i%SKINS.length].id,x:defX,c:CLOTHES[i%CLOTHES.length],hair:HAIRS[i%HAIRS.length]});
+  state.people.push({t:'woman',skin:SKINS[i%SKINS.length].id,x:defX,h:DEFH.woman,c:CLOTHES[i%CLOTHES.length],hair:HAIRS[i%HAIRS.length]});
 }
-function drawPeople(W,H,fy,hpx){
-  const people=state.people.length?state.people:[{t:'woman',skin:'medium',x:0,c:CLOTHES[0],hair:HAIRS[0]}];
-  // people stand at fixed lateral metres; px-per-metre at the subject plane = hpx/subject height.
-  // zooming in grows hpx, so edge people slide out of frame instead of moving — operator must recompose.
-  const ppmS=hpx/state.hp;
+function drawPeople(W,H,fy,ppmS){
+  const people=state.people.length?state.people:[{t:'woman',skin:'medium',x:0,h:DEFH.woman,c:CLOTHES[0],hair:HAIRS[0]}];
+  // people stand at fixed lateral metres; each has its own height (metres) → pixels via ppmS.
+  // zooming in grows ppmS, so edge people slide out of frame instead of moving — operator must recompose.
+  const ph=p=>(p.h||DEFH[p.t]||1.7);
   const px=p=>W/2+(p.x||0)*ppmS;
   // ground shadows (under everyone), offset opposite the key
   const key=state.lt.key, kRad=key.phi*Math.PI/180;
   const shoff=key.on?Math.sin(kRad)*Math.max(0,Math.cos(kRad))*-0.3:0;
   for(const p of people){
-    const sc=TYPESCALE[p.t]||1, hh=hpx*sc;
+    const hh=ph(p)*ppmS;
     ctx.fillStyle='rgba(0,0,0,.38)';
     ctx.beginPath(); ctx.ellipse(px(p)+shoff*hh,Math.min(fy,H+hh),hh*0.20,hh*0.03,0,0,7); ctx.fill();
   }
   // figures onto the offscreen layer
   const pc=pcan.getContext('2d');
   pc.clearRect(0,0,pcan.width,pcan.height); pc.lineCap='round';
-  let minX=1e9,maxX=-1e9;
+  let minX=1e9,maxX=-1e9,refHH=0;
   for(const p of people){
-    const sc=TYPESCALE[p.t]||1, hh=hpx*sc, ox=px(p);
+    const hh=ph(p)*ppmS, ox=px(p); refHH=Math.max(refHH,hh);
     const X=x=>ox+x*hh, Y=y=>fy-y*hh;
     const skinCol=skinC(p.skin), clothCol=p.c||CLOTHES[0], hairCol=p.hair||HAIRS[0];
     const set=c=>{pc.fillStyle=c;pc.strokeStyle=c;};
@@ -1053,10 +1053,10 @@ function drawPeople(W,H,fy,hpx){
   const gMid=(minX+maxX)/2, gHalf=Math.max((maxX-minX)/2,40);
   if(!anyLight){
     // ambient: warm rim one edge, cool kicker the other — just enough to separate from the background
-    const rg=pc.createLinearGradient(maxX-0.20*hpx,0,maxX,0);
+    const rg=pc.createLinearGradient(maxX-0.20*refHH,0,maxX,0);
     rg.addColorStop(0,'rgba(245,200,150,0)'); rg.addColorStop(1,'rgba(245,200,150,.20)');
     pc.fillStyle=rg; pc.fillRect(0,0,W,H);
-    const lg=pc.createLinearGradient(minX+0.20*hpx,0,minX,0);
+    const lg=pc.createLinearGradient(minX+0.20*refHH,0,minX,0);
     lg.addColorStop(0,'rgba(150,180,225,0)'); lg.addColorStop(1,'rgba(150,180,225,.14)');
     pc.fillStyle=lg; pc.fillRect(0,0,W,H);
   } else {
@@ -1084,7 +1084,7 @@ function drawPeople(W,H,fy,hpx){
         const A=Math.min(0.8,-front*I*0.6);
         for(const sgn of (Math.abs(side)<0.2?[-1,1]:[Math.sign(side)])){
           const ex=sgn>0?maxX:minX;
-          const g2=pc.createLinearGradient(ex-sgn*0.22*hpx,0,ex,0);
+          const g2=pc.createLinearGradient(ex-sgn*0.22*refHH,0,ex,0);
           g2.addColorStop(0,`rgba(${col},0)`); g2.addColorStop(1,`rgba(${col},${A.toFixed(3)})`);
           pc.fillStyle=g2; pc.fillRect(0,0,W,H);
         }
@@ -1094,7 +1094,7 @@ function drawPeople(W,H,fy,hpx){
   pc.globalCompositeOperation='source-over';
   ctx.drawImage(pcan,0,0);
   // autofocus on the first person's face
-  const p0=people[0], sc0=TYPESCALE[p0.t]||1, hh0=hpx*sc0;
+  const p0=people[0], hh0=ph(p0)*ppmS;
   return {x:px(p0)+(TYPEAFX[p0.t]||0)*hh0, y:fy-(TYPEAFY[p0.t]||0.916)*hh0, s:Math.max(34,Math.min(0.2*hh0,H*0.4))};
 }
 
@@ -1300,6 +1300,7 @@ function framingLabel(frH,hp){
 }
 function drawStats(res){
   const Dn=res.Dn/1000, Df=res.Df/1000, Hm=res.H/1000;
+  const subjH=(state.people[0]&&state.people[0].h)||DEFH.woman;  // framing relative to the focused person
   const dof=isFinite(Df)?Df-Dn:Infinity;
   const front=state.s-Dn, behind=isFinite(Df)?Df-state.s:Infinity;
   const pct=res.bgFrac*100, [bl,bc]=blurLabel(pct);
@@ -1311,7 +1312,7 @@ function drawStats(res){
     {l:'Background blur', n:`<em>${pct<0.05?'0':pct.toFixed(pct<2?2:1)}%</em> of frame`, s:`<span class="dot" style="background:${bc}"></span>${bl} · bokeh disc ${res.bgDisc.toFixed(2)} mm on sensor`},
     {l:'Hyperfocal', n:fmtLen(Hm), s:`focus there → sharp from ${fmtLen(Hm/2)} to ∞`},
     {l:'Field of view', n:`${deg(res.fov.h)} × ${deg(res.fov.v)}`, s:`frame at subject ${res.frW.toFixed(2)} × ${res.frH.toFixed(2)} m`},
-    {l:'Framing', n:framingLabel(res.frH,state.hp), s:`subject fills ${Math.round(state.hp/res.frH*100)}% of frame height · mag 1:${Math.round(1/res.mag)}`},
+    {l:'Framing', n:framingLabel(res.frH,subjH), s:`subject fills ${Math.round(subjH/res.frH*100)}% of frame height · mag 1:${Math.round(1/res.mag)}`},
   ];
   if(state.lt.key.on&&Math.abs(state.lt.key.phi)<18&&state.lt.key.d<1)
     cards.push({l:'Flash reach', n:`${Math.round(Math.pow(state.s/state.b,2)*100)}%`, s:`background gets (s/b)² of subject exposure — inverse square`});
@@ -1400,7 +1401,7 @@ $('#bgFile').addEventListener('change',e=>{
 $('#bgClear').addEventListener('click',()=>{ customBgImg=null; syncBgChips(); render(); });
 
 // ---------- controls ----------
-const els={focal:$('#focal'),apert:$('#apert'),dist:$('#dist'),bgd:$('#bgd'),hgt:$('#hgt')};
+const els={focal:$('#focal'),apert:$('#apert'),dist:$('#dist'),bgd:$('#bgd')};
 function paintSlider(el){ el.style.setProperty('--p',(el.value-el.min)/(el.max-el.min)*100+'%'); }
 function populateSensors(){
   const list=state.mode==='cine'?CINE_SENSORS:SENSORS;
@@ -1416,7 +1417,6 @@ function syncInputs(){
   els.apert.value=F_STOPS.reduce((bi,v,i)=>Math.abs(v-state.N)<Math.abs(F_STOPS[bi]-state.N)?i:bi,0);
   els.dist.value=M_S.toSlider(state.s);
   els.bgd.value=M_B.toSlider(state.b);
-  els.hgt.value=Math.round(state.hp*100);
   $('#cam').value=state.cam;
   $('#scene').value=state.scene;
   $('#ar').value=state.ar;
@@ -1432,7 +1432,6 @@ function syncInputs(){
   $('#apertV').textContent=(state.mode==='cine'?'T':'ƒ/')+fmtN(state.N);
   $('#distV').textContent=fmtLen(state.s);
   $('#bgdV').textContent=fmtLen(state.b);
-  $('#hgtV').textContent=fmtLen(state.hp);
   $('#peopleCount').textContent=state.people.length+(state.people.length===1?' person':' people');
   for(const k of ['key','fill','rim']){
     const row=document.querySelector(`.lrow[data-l="${k}"]`), L=state.lt[k];
@@ -1462,7 +1461,6 @@ els.focal.addEventListener('input',e=>{state.f=M_F.fromSlider(+e.target.value);r
 els.apert.addEventListener('input',e=>{state.N=F_STOPS[+e.target.value];render();});
 els.dist.addEventListener('input',e=>{state.s=M_S.fromSlider(+e.target.value);render();});
 els.bgd.addEventListener('input',e=>{state.b=M_B.fromSlider(+e.target.value);render();});
-els.hgt.addEventListener('input',e=>{state.hp=+e.target.value/100;render();});
 $('#cam').addEventListener('change',e=>{state.cam=e.target.value;render();});
 // ---- people roster UI ----
 function renderPeople(){
@@ -1481,21 +1479,31 @@ function renderPeople(){
         <input type="range" class="ppos" data-i="${i}" min="-400" max="400" step="5" value="${Math.round((p.x||0)*100)}">
         <span class="pposv" data-i="${i}" style="font-family:var(--mono);font-size:10.5px;color:var(--muted);width:46px;text-align:right">${posLabel(p.x||0)}</span>
       </div>
+      <div style="display:flex;gap:7px;align-items:center;margin-top:4px">
+        <span style="font-size:11px;color:var(--muted);width:26px">Ht</span>
+        <input type="range" class="phgt" data-i="${i}" min="60" max="210" step="1" value="${Math.round((p.h||DEFH[p.t])*100)}">
+        <span class="phgtv" data-i="${i}" style="font-family:var(--mono);font-size:10.5px;color:var(--muted);width:46px;text-align:right">${fmtLen(p.h||DEFH[p.t])}</span>
+      </div>
     </div>`).join('');
   $('#addPerson').style.display=state.people.length>=4?'none':'';
-  document.querySelectorAll('#peopleList .ppos').forEach(paintSlider);
+  document.querySelectorAll('#peopleList .ppos, #peopleList .phgt').forEach(paintSlider);
 }
 $('#peopleList').addEventListener('change',e=>{
   const t=e.target.closest('.ptype'), sk=e.target.closest('.pskin');
-  if(t){ state.people[+t.dataset.i].t=t.value; renderPeople(); render(); }
+  if(t){ const p=state.people[+t.dataset.i]; p.t=t.value; p.h=DEFH[t.value]||p.h; renderPeople(); render(); }
   else if(sk){ state.people[+sk.dataset.i].skin=sk.value; renderPeople(); render(); }
 });
 $('#peopleList').addEventListener('input',e=>{
-  const pos=e.target.closest('.ppos'); if(!pos) return;
-  const i=+pos.dataset.i; state.people[i].x=+pos.value/100;
-  paintSlider(pos);
-  const v=document.querySelector(`.pposv[data-i="${i}"]`); if(v) v.textContent=posLabel(state.people[i].x);
-  render(); // canvas only — don't rebuild the list mid-drag
+  const pos=e.target.closest('.ppos'), hgt=e.target.closest('.phgt');
+  if(pos){
+    const i=+pos.dataset.i; state.people[i].x=+pos.value/100; paintSlider(pos);
+    const v=document.querySelector(`.pposv[data-i="${i}"]`); if(v) v.textContent=posLabel(state.people[i].x);
+    render();
+  } else if(hgt){
+    const i=+hgt.dataset.i; state.people[i].h=+hgt.value/100; paintSlider(hgt);
+    const v=document.querySelector(`.phgtv[data-i="${i}"]`); if(v) v.textContent=fmtLen(state.people[i].h);
+    render();
+  }
 });
 $('#peopleList').addEventListener('click',e=>{
   const del=e.target.closest('.pdel'); if(!del||state.people.length<=1) return;
@@ -1573,8 +1581,8 @@ function queueHash(){
   clearTimeout(hashT);
   hashT=setTimeout(()=>{
     const p=new URLSearchParams({mode:state.mode,cam:state.cam,o:state.o,ar:state.ar,
-      f:state.f.toFixed(1),N:state.N,s:state.s.toFixed(2),b:state.b.toFixed(1),hp:state.hp,
-      ppl:state.people.map(pp=>`${pp.t}_${pp.skin}_${(pp.x||0).toFixed(2)}`).join('~'),
+      f:state.f.toFixed(1),N:state.N,s:state.s.toFixed(2),b:state.b.toFixed(1),
+      ppl:state.people.map(pp=>`${pp.t}_${pp.skin}_${(pp.x||0).toFixed(2)}_${(pp.h||DEFH[pp.t]).toFixed(2)}`).join('~'),
       scene:state.scene,ls:state.ls});
     history.replaceState(null,'','#'+p.toString());
   },300);
@@ -1587,12 +1595,12 @@ function readHash(){
   if(p.get('o')==='p'||p.get('o')==='l') state.o=p.get('o');
   if(p.get('ar')&&ASPECTS.some(a=>a.id===p.get('ar'))) state.ar=p.get('ar');
   if(p.get('ppl')){
-    const arr=p.get('ppl').split('~').map(seg=>{const [t,skin,x]=seg.split('_');return {t,skin,x:parseFloat(x)};});
+    const arr=p.get('ppl').split('~').map(seg=>{const [t,skin,x,h]=seg.split('_');return {t,skin,x:parseFloat(x),h:parseFloat(h)};});
     state.people=normPeople(arr);
   }
   if(p.get('scene')&&SCENES.some(s=>s.id===p.get('scene'))) state.scene=p.get('scene');
   if(p.get('ls')&&SCHEMES.some(s=>s.id===p.get('ls'))&&p.get('ls')!=='custom') applyScheme(p.get('ls'));
-  for(const [k,key] of [['f','f'],['N','N'],['s','s'],['b','b'],['hp','hp']]){
+  for(const [k,key] of [['f','f'],['N','N'],['s','s'],['b','b']]){
     const v=parseFloat(p.get(k)); if(isFinite(v)&&v>0) state[key]=v;
   }
 }
