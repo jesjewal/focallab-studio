@@ -104,8 +104,8 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .prow .swatch{width:15px;height:15px;border-radius:50%;border:1px solid var(--line-2);flex:none}
 .prow .pdel{background:none;border:0;color:var(--faint);cursor:pointer;font-size:13px;padding:0 2px}
 .prow .pdel:hover{color:var(--hot)}
-.prow .ppos,.prow .phgt{flex:1;height:18px}
-.prow .ppos::-webkit-slider-thumb,.prow .phgt::-webkit-slider-thumb{width:13px;height:13px;margin-top:-4px}
+.prow .ppos,.prow .phgt,.prow .pdep{flex:1;height:18px}
+.prow .ppos::-webkit-slider-thumb,.prow .phgt::-webkit-slider-thumb,.prow .pdep::-webkit-slider-thumb{width:13px;height:13px;margin-top:-4px}
 #ovh{margin-top:4px}
 #ovh svg{display:block;width:100%;height:auto;touch-action:none;border-radius:12px;background:var(--panel-2);border:1px solid var(--line-2)}
 #stage{container-type:inline-size}
@@ -269,8 +269,8 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
       </div>
       <div class="duo">
         <div class="ctl">
-          <div class="row"><label for="dist">Camera</label><span class="val" id="distV"></span></div>
-          <input type="range" id="dist" min="0" max="1000" step="1" aria-label="Camera distance to subject">
+          <div class="row"><label for="dist">Focus dist</label><span class="val" id="distV"></span></div>
+          <input type="range" id="dist" min="0" max="1000" step="1" aria-label="Focus distance">
         </div>
         <div class="ctl">
           <div class="row"><label for="bgd">Background</label><span class="val" id="bgdV"></span></div>
@@ -921,13 +921,13 @@ function drawScene(res){
     }
   }
 
-  // subject plane — a roster of people, each at its own height & horizontal position
-  const ppmS=ppm(state.s), fy=groundY(state.s);
+  // subject plane — a roster of people, each at its own distance, height & horizontal position
   if(!customBgImg&&state.scene==='stadium'){
+    const ppmS=ppm(state.s), fy=groundY(state.s);
     ctx.strokeStyle='rgba(210,230,215,.28)'; ctx.lineWidth=Math.max(0.06*ppmS,1);
     ctx.beginPath(); ctx.ellipse(W/2,fy,3.4*ppmS,0.17*ppmS,0,0,7); ctx.stroke();
   }
-  const af=drawPeople(W,H,fy,ppmS);
+  const af=drawPeople(W,H,res,ppm,groundY);
 
   // HUD
   vignette(W,H);
@@ -1114,6 +1114,11 @@ const TYPEAFY={man:0.916,woman:0.916,child:0.885,runner:0.895,soccer:0.905,
 const TYPEAFX={man:0,woman:0,child:0,runner:0.135,soccer:-0.04,
   basketball:0,performer:0,cyclist:0.18,seated:0,dog:0.4};
 function skinC(id){const s=SKINS.find(x=>x.id===id);return s?s.c:SKINS[2].c;}
+function focusedPerson(){ // the person nearest the focus plane (what the AF box lands on)
+  let best=1e9,fp=state.people[0];
+  for(const p of state.people){ const dd=Math.abs((p.d||state.s)-state.s); if(dd<best){best=dd;fp=p;} }
+  return fp;
+}
 function normPeople(arr){
   const a=(arr&&arr.length?arr:[{t:'woman'}]).slice(0,4);
   const cnt={};
@@ -1125,6 +1130,7 @@ function normPeople(arr){
       skin:SKINS.some(x=>x.id===p.skin)?p.skin:SKINS[i%SKINS.length].id,
       x:Math.max(-6,Math.min(6,isFinite(+p.x)?+p.x:0)),  // lateral metres from the optical axis
       h:Math.max(0.6,Math.min(2.1,isFinite(+p.h)?+p.h:DEFH[t])),  // height, metres
+      d:Math.max(0.3,Math.min(150,isFinite(+p.d)?+p.d:state.s)),  // distance from camera, metres
       c:p.c||clothFor(t,n),
       hair:p.hair||HAIRS[i%HAIRS.length]
     };
@@ -1145,28 +1151,75 @@ function addPerson(){
   if(state.people.length>=4) return;
   const i=state.people.length, defX=[0,0.7,-0.7,1.2][i]||0;  // metres
   const n=state.people.filter(p=>p.t==='woman').length;       // distinct feminine colour
-  state.people.push({t:'woman',skin:SKINS[i%SKINS.length].id,x:defX,h:DEFH.woman,c:clothFor('woman',n),hair:HAIRS[i%HAIRS.length]});
+  state.people.push({t:'woman',skin:SKINS[i%SKINS.length].id,x:defX,h:DEFH.woman,d:state.s,c:clothFor('woman',n),hair:HAIRS[i%HAIRS.length]});
 }
-function drawPeople(W,H,fy,ppmS){
-  const people=state.people.length?state.people:[{t:'woman',skin:'medium',x:0,h:DEFH.woman,c:clothFor('woman',0),hair:HAIRS[0]}];
-  // people stand at fixed lateral metres; each has its own height (metres) → pixels via ppmS.
-  // zooming in grows ppmS, so edge people slide out of frame instead of moving — operator must recompose.
+// paint the studio lighting / ambient shading over one figure already on `pc`
+function applyFigLighting(pc,W,H,minX,maxX,refHH){
+  pc.globalCompositeOperation='source-atop';
+  const anyLight=['key','fill','rim'].some(k=>state.lt[k].on);
+  const gMid=(minX+maxX)/2, gHalf=Math.max((maxX-minX)/2,40);
+  if(!anyLight){
+    const rg=pc.createLinearGradient(maxX-0.20*refHH,0,maxX,0);
+    rg.addColorStop(0,'rgba(245,200,150,0)'); rg.addColorStop(1,'rgba(245,200,150,.20)');
+    pc.fillStyle=rg; pc.fillRect(0,0,W,H);
+    const lg=pc.createLinearGradient(minX+0.20*refHH,0,minX,0);
+    lg.addColorStop(0,'rgba(150,180,225,0)'); lg.addColorStop(1,'rgba(150,180,225,.14)');
+    pc.fillStyle=lg; pc.fillRect(0,0,W,H);
+  } else {
+    for(const k of ['key','fill','rim']){
+      const L=state.lt[k]; if(!L.on) continue;
+      const rad=L.phi*Math.PI/180, front=Math.cos(rad), side=Math.sin(rad);
+      const I=(L.i/100)*Math.min(1.4,Math.pow(1.6/L.d,2));
+      const col=TEMPS[L.t]||TEMPS.n;
+      if(front>0.1){
+        const A=Math.min(0.7,front*I*0.6);
+        if(Math.abs(side)<0.18){ pc.fillStyle=`rgba(${col},${(A*0.8).toFixed(3)})`; pc.fillRect(0,0,W,H); }
+        else{
+          const sgn=Math.sign(side);
+          const g2=pc.createLinearGradient(gMid+sgn*gHalf,0,gMid-sgn*gHalf,0);
+          g2.addColorStop(0,`rgba(${col},${A.toFixed(3)})`); g2.addColorStop(1,`rgba(${col},${(A*0.08).toFixed(3)})`);
+          pc.fillStyle=g2; pc.fillRect(0,0,W,H);
+          if(k==='key'){
+            const sh=pc.createLinearGradient(gMid-sgn*gHalf,0,gMid+sgn*gHalf*0.4,0);
+            sh.addColorStop(0,`rgba(8,10,14,${(A*0.55).toFixed(3)})`); sh.addColorStop(1,'rgba(8,10,14,0)');
+            pc.fillStyle=sh; pc.fillRect(0,0,W,H);
+          }
+        }
+      }
+      if(front<-0.1){
+        const A=Math.min(0.8,-front*I*0.6);
+        for(const sgn of (Math.abs(side)<0.2?[-1,1]:[Math.sign(side)])){
+          const ex=sgn>0?maxX:minX;
+          const g2=pc.createLinearGradient(ex-sgn*0.22*refHH,0,ex,0);
+          g2.addColorStop(0,`rgba(${col},0)`); g2.addColorStop(1,`rgba(${col},${A.toFixed(3)})`);
+          pc.fillStyle=g2; pc.fillRect(0,0,W,H);
+        }
+      }
+    }
+  }
+  pc.globalCompositeOperation='source-over';
+}
+function drawPeople(W,H,res,ppm,groundY){
+  const people=state.people.length?state.people:[{t:'woman',skin:'medium',x:0,h:DEFH.woman,d:state.s,c:clothFor('woman',0),hair:HAIRS[0]}];
+  // each person stands at their own distance from camera; off the focus plane they soften (real DoF)
   const ph=p=>(p.h||DEFH[p.t]||1.7);
-  const px=p=>W/2+(p.x||0)*ppmS;
-  // ground shadows (under everyone), offset opposite the key
+  const dp=p=>Math.max(0.3,Math.min(150,p.d||state.s));
   const key=state.lt.key, kRad=key.phi*Math.PI/180;
   const shoff=key.on?Math.sin(kRad)*Math.max(0,Math.cos(kRad))*-0.3:0;
-  for(const p of people){
-    const hh=ph(p)*ppmS;
-    ctx.fillStyle='rgba(0,0,0,.38)';
-    ctx.beginPath(); ctx.ellipse(px(p)+shoff*hh,Math.min(fy,H+hh),hh*0.20,hh*0.03,0,0,7); ctx.fill();
-  }
-  // figures onto the offscreen layer
   const pc=pcan.getContext('2d');
-  pc.clearRect(0,0,pcan.width,pcan.height); pc.lineCap='round';
-  let minX=1e9,maxX=-1e9,refHH=0;
-  for(const p of people){
-    const hh=ph(p)*ppmS, ox=px(p); refHH=Math.max(refHH,hh);
+  // draw far → near so nearer people overlap and the focused plane reads correctly
+  const order=people.map((p,idx)=>({p,idx})).sort((a,b)=>dp(b.p)-dp(a.p));
+  for(const {p} of order){
+    const d=dp(p), ppmD=ppm(d), fy=groundY(d), hh=ph(p)*ppmD, ox=W/2+(p.x||0)*ppmD;
+    const disc=discPx(res,d,H);                 // blur disc (px); 0 at the focus plane
+    const blur=disc>1?Math.min(disc*0.45,46):0;
+    // ground shadow (blurred to match)
+    ctx.save(); ctx.filter=blur?`blur(${Math.min(blur,28)}px)`:'none';
+    ctx.fillStyle='rgba(0,0,0,.36)';
+    ctx.beginPath(); ctx.ellipse(ox+shoff*hh,Math.min(fy,H+hh),hh*0.20,hh*0.03,0,0,7); ctx.fill();
+    ctx.restore();
+    // figure onto the offscreen layer
+    pc.clearRect(0,0,pcan.width,pcan.height); pc.lineCap='round';
     const X=x=>ox+x*hh, Y=y=>fy-y*hh;
     const skinCol=skinC(p.skin), clothCol=p.c||clothFor(p.t,0), hairCol=p.hair||HAIRS[0];
     const set=c=>{pc.fillStyle=c;pc.strokeStyle=c;};
@@ -1189,57 +1242,14 @@ function drawPeople(W,H,fy,ppmS){
       },
     };
     (TYPEFIG[p.t]||figWoman)(s);
-    minX=Math.min(minX,ox-0.34*hh); maxX=Math.max(maxX,ox+0.34*hh);
+    applyFigLighting(pc,W,H,ox-0.34*hh,ox+0.34*hh,hh);
+    // composite with this person's blur
+    ctx.save(); ctx.filter=blur?`blur(${blur}px)`:'none';
+    ctx.drawImage(pcan,0,0); ctx.restore();
   }
-  // lighting / ambient shading over all figures
-  pc.globalCompositeOperation='source-atop';
-  const anyLight=['key','fill','rim'].some(k=>state.lt[k].on);
-  const gMid=(minX+maxX)/2, gHalf=Math.max((maxX-minX)/2,40);
-  if(!anyLight){
-    // ambient: warm rim one edge, cool kicker the other — just enough to separate from the background
-    const rg=pc.createLinearGradient(maxX-0.20*refHH,0,maxX,0);
-    rg.addColorStop(0,'rgba(245,200,150,0)'); rg.addColorStop(1,'rgba(245,200,150,.20)');
-    pc.fillStyle=rg; pc.fillRect(0,0,W,H);
-    const lg=pc.createLinearGradient(minX+0.20*refHH,0,minX,0);
-    lg.addColorStop(0,'rgba(150,180,225,0)'); lg.addColorStop(1,'rgba(150,180,225,.14)');
-    pc.fillStyle=lg; pc.fillRect(0,0,W,H);
-  } else {
-    for(const k of ['key','fill','rim']){
-      const L=state.lt[k]; if(!L.on) continue;
-      const rad=L.phi*Math.PI/180, front=Math.cos(rad), side=Math.sin(rad);
-      const I=(L.i/100)*Math.min(1.4,Math.pow(1.6/L.d,2));
-      const col=TEMPS[L.t]||TEMPS.n;
-      if(front>0.1){
-        const A=Math.min(0.7,front*I*0.6);
-        if(Math.abs(side)<0.18){ pc.fillStyle=`rgba(${col},${(A*0.8).toFixed(3)})`; pc.fillRect(0,0,W,H); }
-        else{
-          const sgn=Math.sign(side);
-          const g2=pc.createLinearGradient(gMid+sgn*gHalf,0,gMid-sgn*gHalf,0);
-          g2.addColorStop(0,`rgba(${col},${A.toFixed(3)})`); g2.addColorStop(1,`rgba(${col},${(A*0.08).toFixed(3)})`);
-          pc.fillStyle=g2; pc.fillRect(0,0,W,H);
-          if(k==='key'){ // form shadow on the unlit side
-            const sh=pc.createLinearGradient(gMid-sgn*gHalf,0,gMid+sgn*gHalf*0.4,0);
-            sh.addColorStop(0,`rgba(8,10,14,${(A*0.55).toFixed(3)})`); sh.addColorStop(1,'rgba(8,10,14,0)');
-            pc.fillStyle=sh; pc.fillRect(0,0,W,H);
-          }
-        }
-      }
-      if(front<-0.1){
-        const A=Math.min(0.8,-front*I*0.6);
-        for(const sgn of (Math.abs(side)<0.2?[-1,1]:[Math.sign(side)])){
-          const ex=sgn>0?maxX:minX;
-          const g2=pc.createLinearGradient(ex-sgn*0.22*refHH,0,ex,0);
-          g2.addColorStop(0,`rgba(${col},0)`); g2.addColorStop(1,`rgba(${col},${A.toFixed(3)})`);
-          pc.fillStyle=g2; pc.fillRect(0,0,W,H);
-        }
-      }
-    }
-  }
-  pc.globalCompositeOperation='source-over';
-  ctx.drawImage(pcan,0,0);
-  // autofocus on the first person's face
-  const p0=people[0], hh0=ph(p0)*ppmS;
-  return {x:px(p0)+(TYPEAFX[p0.t]||0)*hh0, y:fy-(TYPEAFY[p0.t]||0.916)*hh0, s:Math.max(34,Math.min(0.2*hh0,H*0.4))};
+  // autofocus on whoever is nearest the focus plane (the sharp one)
+  const p0=focusedPerson()||people[0], d0=dp(p0), ppm0=ppm(d0), fy0=groundY(d0), hh0=ph(p0)*ppm0, ox0=W/2+(p0.x||0)*ppm0;
+  return {x:ox0+(TYPEAFX[p0.t]||0)*hh0, y:fy0-(TYPEAFY[p0.t]||0.916)*hh0, s:Math.max(28,Math.min(0.2*hh0,H*0.4))};
 }
 
 function vignette(W,H){
@@ -1444,7 +1454,8 @@ function framingLabel(frH,hp){
 }
 function drawStats(res){
   const Dn=res.Dn/1000, Df=res.Df/1000, Hm=res.H/1000;
-  const subjH=(state.people[0]&&state.people[0].h)||DEFH.woman;  // framing relative to the focused person
+  const p0=focusedPerson()||{}, subjH=p0.h||DEFH.woman, subjD=Math.max(0.3,Math.min(150,p0.d||state.s));
+  const frHp=Math.max(0.01,fieldH(res,subjD));  // frame height at the focused person's distance
   const dof=isFinite(Df)?Df-Dn:Infinity;
   const front=state.s-Dn, behind=isFinite(Df)?Df-state.s:Infinity;
   const pct=res.bgFrac*100, [bl,bc]=blurLabel(pct);
@@ -1456,7 +1467,7 @@ function drawStats(res){
     {l:'Background blur', n:`<em>${pct<0.05?'0':pct.toFixed(pct<2?2:1)}%</em> of frame`, s:`<span class="dot" style="background:${bc}"></span>${bl} · bokeh disc ${res.bgDisc.toFixed(2)} mm on sensor`},
     {l:'Hyperfocal', n:fmtLen(Hm), s:`focus there → sharp from ${fmtLen(Hm/2)} to ∞`},
     {l:'Field of view', n:`${deg(res.fov.h)} × ${deg(res.fov.v)}`, s:`frame at subject ${res.frW.toFixed(2)} × ${res.frH.toFixed(2)} m`},
-    {l:'Framing', n:framingLabel(res.frH,subjH), s:`subject fills ${Math.round(subjH/res.frH*100)}% of frame height · mag 1:${Math.round(1/res.mag)}`},
+    {l:'Framing', n:framingLabel(frHp,subjH), s:`subject fills ${Math.round(subjH/frHp*100)}% of frame height · focused at ${fmtLen(state.s)}`},
   ];
   if(state.lt.key.on&&Math.abs(state.lt.key.phi)<18&&state.lt.key.d<1)
     cards.push({l:'Flash reach', n:`${Math.round(Math.pow(state.s/state.b,2)*100)}%`, s:`background gets (s/b)² of subject exposure — inverse square`});
@@ -1628,9 +1639,14 @@ function renderPeople(){
         <input type="range" class="phgt" data-i="${i}" min="60" max="210" step="1" value="${Math.round((p.h||DEFH[p.t])*100)}">
         <span class="phgtv" data-i="${i}" style="font-family:var(--mono);font-size:10.5px;color:var(--muted);width:46px;text-align:right">${fmtLen(p.h||DEFH[p.t])}</span>
       </div>
+      <div style="display:flex;gap:7px;align-items:center;margin-top:4px">
+        <span style="font-size:11px;color:var(--muted);width:26px">Depth</span>
+        <input type="range" class="pdep" data-i="${i}" min="0" max="1000" step="1" value="${M_S.toSlider(p.d||state.s)}">
+        <span class="pdepv" data-i="${i}" style="font-family:var(--mono);font-size:10.5px;color:var(--muted);width:46px;text-align:right">${fmtLen(p.d||state.s)}</span>
+      </div>
     </div>`).join('');
   $('#addPerson').style.display=state.people.length>=4?'none':'';
-  document.querySelectorAll('#peopleList .ppos, #peopleList .phgt').forEach(paintSlider);
+  document.querySelectorAll('#peopleList .ppos, #peopleList .phgt, #peopleList .pdep').forEach(paintSlider);
 }
 $('#peopleList').addEventListener('change',e=>{
   const t=e.target.closest('.ptype'), sk=e.target.closest('.pskin');
@@ -1649,6 +1665,11 @@ $('#peopleList').addEventListener('input',e=>{
   } else if(hgt){
     const i=+hgt.dataset.i; state.people[i].h=+hgt.value/100; paintSlider(hgt);
     const v=document.querySelector(`.phgtv[data-i="${i}"]`); if(v) v.textContent=fmtLen(state.people[i].h);
+    render();
+  } else {
+    const dep=e.target.closest('.pdep'); if(!dep) return;
+    const i=+dep.dataset.i; state.people[i].d=M_S.fromSlider(+dep.value); paintSlider(dep);
+    const v=document.querySelector(`.pdepv[data-i="${i}"]`); if(v) v.textContent=fmtLen(state.people[i].d);
     render();
   }
 });
@@ -1732,7 +1753,7 @@ function queueHash(){
   hashT=setTimeout(()=>{
     const p=new URLSearchParams({mode:state.mode,cam:state.cam,o:state.o,ar:state.ar,
       f:state.f.toFixed(1),N:state.N,s:state.s.toFixed(2),b:state.b.toFixed(1),
-      ppl:state.people.map(pp=>`${pp.t}_${pp.skin}_${(pp.x||0).toFixed(2)}_${(pp.h||DEFH[pp.t]).toFixed(2)}`).join('~'),
+      ppl:state.people.map(pp=>`${pp.t}_${pp.skin}_${(pp.x||0).toFixed(2)}_${(pp.h||DEFH[pp.t]).toFixed(2)}_${(pp.d||state.s).toFixed(2)}`).join('~'),
       scene:state.scene,ls:state.ls});
     history.replaceState(null,'','#'+p.toString());
   },300);
@@ -1745,7 +1766,7 @@ function readHash(){
   if(p.get('o')==='p'||p.get('o')==='l') state.o=p.get('o');
   if(p.get('ar')&&ASPECTS.some(a=>a.id===p.get('ar'))) state.ar=p.get('ar');
   if(p.get('ppl')){
-    const arr=p.get('ppl').split('~').map(seg=>{const [t,skin,x,h]=seg.split('_');return {t,skin,x:parseFloat(x),h:parseFloat(h)};});
+    const arr=p.get('ppl').split('~').map(seg=>{const [t,skin,x,h,d]=seg.split('_');return {t,skin,x:parseFloat(x),h:parseFloat(h),d:parseFloat(d)};});
     state.people=normPeople(arr);
   }
   if(p.get('scene')&&SCENES.some(s=>s.id===p.get('scene'))) state.scene=p.get('scene');
