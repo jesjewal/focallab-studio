@@ -55,5 +55,6 @@ Not simulated: lens character (cat-eye, swirl, onion rings), focus breathing, mo
 - Named camera/lens picker; foreground blur plane; aperture-blade bokeh shapes
 - More subjects (couple, cyclist, dog) and locations (snowy holiday lights, café interior)
 - Bokeh extraction from uploaded backdrops (find bright points, render them as discs)
+- AI background/subject generation via Gemini 2.5 Flash Image ("nano banana"), bring-your-own-key: describe a backdrop/subject, we expand the prompt and generate it. Phase 1 = AI backdrop into the existing upload pipeline; Phase 2 = AI reference subjects as flat sprites. Procedural scenes stay the default.
 
 Original build — not affiliated with dofsimulator.net. Built by Jesse Wallace, June 2026.
