@@ -145,6 +145,20 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
 footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);font-size:12px}
 #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);padding:10px 18px;border-radius:12px;font-size:13px;transition:.25s;opacity:0;pointer-events:none;z-index:50}
 #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+/* guided tour */
+#tourLayer{position:fixed;inset:0;z-index:200}
+#tourSpot{position:absolute;border-radius:12px;box-shadow:0 0 0 9999px rgba(4,7,12,.66);transition:all .25s ease;pointer-events:none;border:2px solid var(--accent)}
+#tourSpot.hide{display:none}
+#tourCard{position:absolute;width:330px;max-width:calc(100vw - 28px);background:var(--panel);border:1px solid var(--line-2);border-radius:14px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:top .25s,left .25s}
+#tourCard h3{margin:4px 0 8px;font-size:16px}
+#tourProg{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+#tourBody{font-size:13.5px;color:var(--muted);line-height:1.5}
+#tourBody b{color:var(--text)}
+#tourBody .opt{display:block;width:100%;text-align:left;margin:8px 0 0;background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;transition:.15s}
+#tourBody .opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+#tourBody .opt b{display:block;font-size:13.5px}
+#tourBody .opt span{font-size:12px;color:var(--muted)}
+#tourNav{display:flex;align-items:center;gap:8px;margin-top:14px}
 @media (max-width:1380px){
   main{grid-template-columns:254px minmax(0,1fr) 254px;gap:11px;padding:8px 12px 24px}
   .card{padding:11px}
@@ -206,10 +220,26 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
     </div>
   </div>
   <div class="spacer"></div>
+  <button class="btn" id="learnBtn" title="Take a guided tour or learn the basics">◉ Learn</button>
   <button class="btn icon" id="unitBtn" title="Switch units (meters / feet & inches)" aria-label="Switch measurement units">ft</button>
   <button class="btn icon" id="themeBtn" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">☀</button>
   <button class="btn" id="copyLink" title="Copy a shareable link with the current settings">Copy settings link</button>
 </header>
+
+<div id="tourLayer" hidden>
+  <div id="tourSpot"></div>
+  <div id="tourCard">
+    <div id="tourProg"></div>
+    <h3 id="tourTitle"></h3>
+    <div id="tourBody"></div>
+    <div id="tourNav">
+      <button class="btn small" id="tourSkip">Exit</button>
+      <span style="flex:1"></span>
+      <button class="btn small" id="tourBack">Back</button>
+      <button class="btn small" id="tourNext">Next</button>
+    </div>
+  </div>
+</div>
 
 <main>
   <aside id="railL">
@@ -1847,6 +1877,109 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change',e=>{
   let stored=null; try{ stored=localStorage.getItem('focallab.theme'); }catch(_){}
   if(!stored) applyTheme(e.matches?'light':'dark',false);
 });
+
+// ---------- guided tour ----------
+(function(){
+  const set=o=>{Object.assign(state,o);render();};
+  const mode=m=>{const b=document.querySelector(`#modeSeg button[data-m="${m}"]`); if(b&&state.mode!==m) b.click();};
+  const scheme=s=>{applyScheme(s);render();};
+  const stagePeople=arr=>{state.people=normPeople(arr);renderPeople();render();};
+
+  const TOURS={
+    tour:[
+      {sel:'#modeSeg',title:'Photo & Cinema',body:'FocalLab works two ways. <b>Photo</b> uses still-camera sensors and ƒ-stops; <b>Cinema</b> uses cine sensors, T-stops and film aspect ratios. The whole app adapts to the mode.'},
+      {sel:'#cam',spot:'card',title:'Pick your camera',body:'Choose a <b>sensor</b> — full-frame, APS-C, a phone, or cine formats. Bigger sensors blur backgrounds more for the same shot. Orientation/aspect lives here too.'},
+      {sel:'#focal',spot:'card',title:'Set the lens',body:'<b>Focal length</b> sets how wide or tight you are; <b>aperture</b> (ƒ/) sets how much blur. Wide aperture (small number) = shallow focus.'},
+      {sel:'#scene',spot:'card',title:'Build the scene',body:'Pick a <b>location</b>, then add <b>people</b> one at a time — each with their own type, skin tone, height, position, and distance from camera. Or upload your own backdrop.'},
+      {sel:'#lscheme',spot:'card',title:'Light it',body:'Choose a lighting setup, or <b>drag the key / fill / rim lights</b> around the overhead stage. The subject re-lights live, with real falloff and shadows.'},
+      {sel:'.frame',title:'Your viewfinder',body:'This is the live shot. Everything you change shows here instantly — framing, depth of field, bokeh, and lighting. Resize it with the S / M / L control.'},
+      {sel:'#stats',title:'The numbers',body:'Real optics behind the picture: depth of field, what’s in focus, hyperfocal distance, field of view, and how much the background is blurred.'},
+      {sel:'#shotsCard',spot:'card',title:'Save, share, export',body:'<b>Save</b> looks (or storyboard shots in Cinema), export a <b>PDF</b> sheet, or <b>copy a link</b> that reopens the exact setup on any device. That’s the tour — go make something.'},
+    ],
+    photo:[
+      {menu:false,sel:null,title:'Photography 101',body:'A 90-second crash course in the three things that shape a photo: <b>aperture</b>, <b>focal length</b>, and <b>distance</b>. Watch the viewfinder as each step changes a setting.',before:()=>{mode('photo');stagePeople([{t:'woman',x:0,d:2.5}]);set({f:85,N:1.8,s:2.5,b:18});}},
+      {sel:'#apert',spot:'card',title:'Aperture, wide open',body:'Aperture is the lens opening, written ƒ/. We just set <b>ƒ/1.8</b> — wide open. See how the background melts into soft blur? That’s a <b>shallow depth of field</b>: only the subject is sharp.',before:()=>set({N:1.8})},
+      {sel:'#apert',spot:'card',title:'Aperture, stopped down',body:'Now <b>ƒ/11</b> — a small opening. The background snaps into focus: a <b>deep depth of field</b>. Big number = more in focus, small number = more blur. That’s the single most important trade in photography.',before:()=>set({N:11})},
+      {sel:'#focal',spot:'card',title:'Focal length',body:'Back to ƒ/2. Focal length is the zoom. <b>85mm</b> (now) is a flattering portrait length — tight and compressed. Short lengths (24mm) go wide and show the whole room. Try dragging it after the tour.',before:()=>set({N:2,f:85})},
+      {sel:'#dist',spot:'card',title:'Distance & background',body:'How far the subject is from the <b>background</b> matters as much as the lens. The farther back the background, the more it blurs. Closer camera-to-subject also softens the backdrop.'},
+      {sel:'#lscheme',spot:'card',title:'Lighting',body:'We just switched on a <b>3-point</b> setup — a key light, a softer fill, and a rim from behind for separation. Drag the lights on the stage to see the shadows move. Light is what turns a snapshot into a portrait.',before:()=>scheme('3point')},
+      {sel:null,title:'Now you try',body:'That’s the foundation. Play: open the aperture for dreamy portraits, stop down for landscapes, move people in depth, and relight. When you nail a look, <b>Save</b> it or <b>copy the link</b>.',before:()=>scheme('none')},
+    ],
+    cine:[
+      {sel:null,title:'Cinema 101',body:'Cinema mode thinks like a film camera. Same optics, different language — and tools for staging coverage. Let’s switch over.',before:()=>{mode('cine');stagePeople([{t:'man',x:-0.5,d:3},{t:'woman',x:0.5,d:6}]);set({f:50,N:2,s:6,b:25});}},
+      {sel:'#cam',spot:'card',title:'Cine sensors',body:'These are motion-picture formats — <b>Super 35</b>, <b>Alexa LF</b>, <b>VistaVision</b>, up to <b>Alexa 65</b>. Larger formats give that big-screen shallow look.'},
+      {sel:'#ar',spot:'card',title:'Aspect ratio',body:'Film shapes: <b>2.39:1</b> (wide anamorphic), 1.85, 2:1, 16:9. The viewfinder reframes to match, with action-safe guides and a REC/timecode readout.'},
+      {sel:'#apert',spot:'card',title:'T-stops',body:'Cine lenses use <b>T-stops</b> instead of ƒ — same depth-of-field effect, but measured by actual light transmission so exposure matches across lenses.'},
+      {sel:'#peopleList',spot:'card',title:'Stage in depth',body:'We placed two actors at <b>different distances</b> (3m and 6m). Focus sits on one plane — the other goes soft. Give each person a <b>Depth</b> to block a scene and see who falls out of focus.'},
+      {sel:'#shotsCard',spot:'card',title:'Storyboard',body:'In Cinema, saved frames become a <b>storyboard</b> — name, reorder, and step through your coverage, then export a PDF. That’s the cinema workflow.'},
+    ],
+  };
+
+  let steps=[], cur=0, active=false;
+  const L=$('#tourLayer'), spot=$('#tourSpot'), card=$('#tourCard');
+  function rectFor(st){
+    if(!st.sel) return null;
+    let el=document.querySelector(st.sel); if(!el) return null;
+    if(st.spot==='card') el=el.closest('.card')||el;
+    el.scrollIntoView({block:'nearest',behavior:'instant'});
+    return el.getBoundingClientRect();
+  }
+  function placeSpot(rect){
+    if(!rect){ spot.classList.add('hide'); return; }
+    spot.classList.remove('hide'); const pad=8;
+    spot.style.left=(rect.left-pad)+'px'; spot.style.top=(rect.top-pad)+'px';
+    spot.style.width=(rect.width+pad*2)+'px'; spot.style.height=(rect.height+pad*2)+'px';
+  }
+  function placeCard(rect){
+    card.style.visibility='hidden';
+    const cw=card.offsetWidth, ch=card.offsetHeight, m=14;
+    let top,left;
+    if(!rect){ left=(innerWidth-cw)/2; top=(innerHeight-ch)/2; }
+    else{
+      left=Math.min(Math.max(rect.left,m),innerWidth-cw-m);
+      if(rect.bottom+ch+m<=innerHeight) top=rect.bottom+m;
+      else if(rect.top-ch-m>=0) top=rect.top-ch-m;
+      else top=Math.min(Math.max((innerHeight-ch)/2,m),innerHeight-ch-m);
+    }
+    card.style.left=Math.round(left)+'px'; card.style.top=Math.round(top)+'px'; card.style.visibility='visible';
+  }
+  function position(){ const st=steps[cur]; if(!st) return; const r=rectFor(st); placeSpot(r); placeCard(r); }
+  function showStep(i){
+    cur=i; const st=steps[i]; if(!st) return;
+    if(st.before) st.before();
+    $('#tourProg').textContent='Step '+(i+1)+' of '+steps.length;
+    $('#tourTitle').textContent=st.title;
+    $('#tourBody').innerHTML=st.body;
+    $('#tourBack').style.visibility=i>0?'visible':'hidden';
+    $('#tourNext').textContent=i>=steps.length-1?'Done':'Next ›';
+    setTimeout(position,40);   // let any state change settle, works even when tab is backgrounded
+  }
+  function startTrack(key){ steps=TOURS[key]||TOURS.tour; cur=0; active=true; showStep(0); }
+  function endTour(){ active=false; L.hidden=true; }
+  function openMenu(){
+    L.hidden=false; spot.classList.add('hide'); active=true; steps=[];
+    $('#tourProg').textContent='Guided learning';
+    $('#tourTitle').textContent='Learn FocalLab';
+    $('#tourBody').innerHTML=
+      '<button class="opt" data-k="tour"><b>Take the quick tour</b><span>Where everything is · ~1 min</span></button>'+
+      '<button class="opt" data-k="photo"><b>Photography 101</b><span>New to cameras? Learn aperture, lens & light</span></button>'+
+      '<button class="opt" data-k="cine"><b>Cinema 101</b><span>The video workflow: formats, T-stops, staging</span></button>';
+    $('#tourBack').style.display='none'; $('#tourNext').style.display='none';
+    placeCard(null);
+  }
+  $('#learnBtn').addEventListener('click',()=>{ if(!L.hidden){endTour();return;} openMenu(); });
+  $('#tourBody').addEventListener('click',e=>{ const o=e.target.closest('.opt'); if(!o) return;
+    $('#tourBack').style.display=''; $('#tourNext').style.display=''; L.hidden=false; startTrack(o.dataset.k); });
+  $('#tourNext').addEventListener('click',()=>{ if(cur>=steps.length-1) endTour(); else showStep(cur+1); });
+  $('#tourBack').addEventListener('click',()=>{ if(cur>0) showStep(cur-1); });
+  $('#tourSkip').addEventListener('click',endTour);
+  addEventListener('resize',()=>{ if(active&&steps.length) position(); });
+  addEventListener('keydown',e=>{ if(L.hidden) return;
+    if(e.key==='Escape') endTour();
+    else if(e.key==='ArrowRight'&&steps.length){ if(cur<steps.length-1) showStep(cur+1); }
+    else if(e.key==='ArrowLeft'&&steps.length&&cur>0) showStep(cur-1);
+  });
+})();
 
 // ---------- go ----------
 readHash();
