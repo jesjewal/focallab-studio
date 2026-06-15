@@ -95,7 +95,9 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .tgl input:checked + .sw::after{left:17px;background:#0b0f14}
 .lrow{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:12px}
 .lrow .ldot{width:9px;height:9px;border-radius:50%;flex:none}
-.lrow .lname{width:30px;flex:none;color:var(--muted)}
+.lrow .lname{width:34px;flex:none;color:var(--muted);white-space:nowrap;overflow:hidden}
+.lrow .ldel{background:none;border:0;color:var(--faint);cursor:pointer;font-size:12px;padding:0 2px;flex:none}
+.lrow .ldel:hover{color:var(--hot)}
 .lrow input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;flex:none}
 .lrow input[type=range]{flex:1;height:18px}
 .lrow input[type=range]::-webkit-slider-thumb{width:13px;height:13px;margin-top:-4px}
@@ -351,21 +353,9 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
         <select id="lscheme" aria-label="Lighting setup"></select>
       </div>
       <div id="ovh" title="Drag the lights around the subject"></div>
-      <div class="lrow" data-l="key">
-        <input type="checkbox" class="lon"><span class="ldot" style="background:var(--accent)"></span><span class="lname">Key</span>
-        <select class="mini ltemp"><option value="w">3200K</option><option value="n">5600K</option><option value="c">7500K</option></select>
-        <input type="range" class="lint" min="0" max="100" step="1">
-      </div>
-      <div class="lrow" data-l="fill">
-        <input type="checkbox" class="lon"><span class="ldot" style="background:var(--teal)"></span><span class="lname">Fill</span>
-        <select class="mini ltemp"><option value="w">3200K</option><option value="n">5600K</option><option value="c">7500K</option></select>
-        <input type="range" class="lint" min="0" max="100" step="1">
-      </div>
-      <div class="lrow" data-l="rim">
-        <input type="checkbox" class="lon"><span class="ldot" style="background:var(--violet)"></span><span class="lname">Rim</span>
-        <select class="mini ltemp"><option value="w">3200K</option><option value="n">5600K</option><option value="c">7500K</option></select>
-        <input type="range" class="lint" min="0" max="100" step="1">
-      </div>
+      <div class="hint" style="font-size:11px;margin:4px 0 2px">Drag a light to move it. Closer lights are brighter.</div>
+      <div id="lightList"></div>
+      <div class="chips" style="margin-top:6px"><button id="addLight">＋ Add light</button></div>
     </div>
 
     <div class="card" id="shotsCard">
@@ -448,9 +438,7 @@ const state={mode:'photo', cam:'ff', o:'l', ar:'2.39', f:85, N:1.8, s:2.5, b:18,
   people:[{t:'woman',skin:'medium',x:0,h:1.65,c:'#c2566f',hair:'#241a12'}],
   scene:'city', lights:true, grid:false, hud:true,
   ls:'none',
-  lt:{key: {on:false, phi:-40, d:1.8, i:75, t:'w'},
-      fill:{on:false, phi:50,  d:2.2, i:35, t:'n'},
-      rim: {on:false, phi:150, d:1.8, i:65, t:'n'}}};
+  rig:[]};
 let customBgImg=null;
 
 const $=s=>document.querySelector(s);
@@ -461,21 +449,38 @@ const logMap=(min,max)=>({
 });
 const M_F=logMap(5,800), M_S=logMap(0.25,120), M_B=logMap(0.4,2000);
 
+// dynamic lighting plot: up to 6 lights, each draggable on the overhead stage
+const LROLE=['Key','Fill','Rim','Light 4','Light 5','Light 6'];
+const PLBL=['K','F','R','4','5','6'];                      // puck labels
+const LCOLV=['--accent','--teal','--violet','--good','--hot','--text'];  // puck colours
+const mk=(phi,d,i,t,role)=>({on:true,phi,d,i,t,role});
 const SCHEMES=[
-  {id:'none',   name:'Natural / ambient', set:{key:{on:false},fill:{on:false},rim:{on:false}}},
-  {id:'flash',  name:'On-camera flash',   set:{key:{on:true,phi:0,d:0.6,i:85,t:'n'},fill:{on:false},rim:{on:false}}},
-  {id:'key',    name:'Key only',          set:{key:{on:true,phi:-40,d:1.8,i:75,t:'w'},fill:{on:false},rim:{on:false}}},
-  {id:'keyfill',name:'Key + fill',        set:{key:{on:true,phi:-40,d:1.8,i:75,t:'w'},fill:{on:true,phi:50,d:2.2,i:35,t:'n'},rim:{on:false}}},
-  {id:'3point', name:'3-point',           set:{key:{on:true,phi:-40,d:1.8,i:75,t:'w'},fill:{on:true,phi:50,d:2.2,i:35,t:'n'},rim:{on:true,phi:150,d:1.8,i:65,t:'n'}}},
-  {id:'backlit',name:'Backlit / silhouette', set:{key:{on:false},fill:{on:false},rim:{on:true,phi:175,d:1.5,i:85,t:'w'}}},
-  {id:'custom', name:'Custom', set:null},
+  {id:'none',   name:'Natural / ambient', lights:[]},
+  {id:'flash',  name:'On-camera flash',   lights:[mk(0,0.6,85,'n','Key')]},
+  {id:'key',    name:'Key only',          lights:[mk(-40,1.8,75,'w','Key')]},
+  {id:'keyfill',name:'Key + fill',        lights:[mk(-40,1.8,75,'w','Key'),mk(50,2.2,35,'n','Fill')]},
+  {id:'3point', name:'3-point',           lights:[mk(-40,1.8,75,'w','Key'),mk(50,2.2,35,'n','Fill'),mk(150,1.8,65,'n','Rim')]},
+  {id:'backlit',name:'Backlit / silhouette', lights:[mk(175,1.5,85,'w','Rim')]},
+  {id:'custom', name:'Custom', lights:null},
 ];
 function applyScheme(id){
-  const sc=SCHEMES.find(s=>s.id===id); if(!sc||!sc.set) {state.ls=id; return;}
+  const sc=SCHEMES.find(s=>s.id===id); if(!sc) return;
   state.ls=id;
-  for(const k of ['key','fill','rim']) Object.assign(state.lt[k], sc.set[k]||{});
+  if(sc.lights!==null) state.rig=sc.lights.map(L=>({...L}));
 }
 function markCustom(){ state.ls='custom'; }
+function addLight(){
+  if(state.rig.length>=6) return;
+  const i=state.rig.length, phi=[-40,50,150,0,100,-110][i]||0;
+  state.rig.push({on:true,phi,d:1.8,i:60,t:'n',role:LROLE[i]||'Light'});
+  markCustom();
+}
+function ensureLights(st){ // migrate old {key,fill,rim} states to the array model
+  if(Array.isArray(st.rig)) return;
+  const out=[], map={key:'Key',fill:'Fill',rim:'Rim'};
+  if(st.lt) for(const k of ['key','fill','rim']){ const L=st.lt[k]; if(L&&L.on) out.push({on:true,phi:L.phi,d:L.d,i:L.i,t:L.t,role:map[k]}); }
+  st.rig=out;
+}
 
 // ---------- scenes (deterministic worlds; positions in meters at their plane) ----------
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -941,8 +946,8 @@ function drawScene(res){
   }
 
   // flash spill on the background — inverse square: relative exposure ≈ (s/b)²
-  const fl=state.lt.key;
-  if(fl.on&&Math.abs(fl.phi)<18&&fl.d<1){
+  const fl=state.rig.find(L=>L.on&&Math.abs(L.phi)<18&&L.d<1);  // an on-camera flash: frontal & very close
+  if(fl){
     const a=Math.min(0.5,0.45*(fl.i/100)*Math.pow(state.s/state.b,2)*4);
     if(a>0.01){
       const fg=ctx.createRadialGradient(W/2,H*0.55,0,W/2,H*0.55,W*0.55);
@@ -1188,7 +1193,7 @@ function addPerson(){
 // own distance & angle to each light, so nearer people are brighter (inverse-square)
 function applyFigLighting(pc,W,H,minX,maxX,refHH,pLat,pDepth,focusDepth){
   pc.globalCompositeOperation='source-atop';
-  const anyLight=['key','fill','rim'].some(k=>state.lt[k].on);
+  const anyLight=state.rig.some(L=>L.on);
   const gMid=(minX+maxX)/2, gHalf=Math.max((maxX-minX)/2,40);
   if(!anyLight){
     const rg=pc.createLinearGradient(maxX-0.20*refHH,0,maxX,0);
@@ -1198,8 +1203,8 @@ function applyFigLighting(pc,W,H,minX,maxX,refHH,pLat,pDepth,focusDepth){
     lg.addColorStop(0,'rgba(150,180,225,0)'); lg.addColorStop(1,'rgba(150,180,225,.14)');
     pc.fillStyle=lg; pc.fillRect(0,0,W,H);
   } else {
-    for(const k of ['key','fill','rim']){
-      const L=state.lt[k]; if(!L.on) continue;
+    for(const L of state.rig){
+      if(!L.on) continue;
       const rad=L.phi*Math.PI/180;
       const lightLat=Math.sin(rad)*L.d, lightDepth=focusDepth-Math.cos(rad)*L.d;  // light's world spot
       const dx=lightLat-pLat, dz=pDepth-lightDepth, dist=Math.max(0.5,Math.hypot(dx,dz));
@@ -1214,9 +1219,9 @@ function applyFigLighting(pc,W,H,minX,maxX,refHH,pLat,pDepth,focusDepth){
           const g2=pc.createLinearGradient(gMid+sgn*gHalf,0,gMid-sgn*gHalf,0);
           g2.addColorStop(0,`rgba(${col},${A.toFixed(3)})`); g2.addColorStop(1,`rgba(${col},${(A*0.08).toFixed(3)})`);
           pc.fillStyle=g2; pc.fillRect(0,0,W,H);
-          if(k==='key'){
+          if(L.i>=55){ // a strong frontal light carves a form shadow on the far side
             const sh=pc.createLinearGradient(gMid-sgn*gHalf,0,gMid+sgn*gHalf*0.4,0);
-            sh.addColorStop(0,`rgba(8,10,14,${(A*0.55).toFixed(3)})`); sh.addColorStop(1,'rgba(8,10,14,0)');
+            sh.addColorStop(0,`rgba(8,10,14,${(A*0.5).toFixed(3)})`); sh.addColorStop(1,'rgba(8,10,14,0)');
             pc.fillStyle=sh; pc.fillRect(0,0,W,H);
           }
         }
@@ -1239,8 +1244,9 @@ function drawPeople(W,H,res,ppm,groundY){
   // each person stands at their own distance from camera; off the focus plane they soften (real DoF)
   const ph=p=>(p.h||DEFH[p.t]||1.7);
   const dp=p=>Math.max(0.3,Math.min(150,p.d||state.s));
-  const key=state.lt.key, kRad=key.phi*Math.PI/180;
-  const shoff=key.on?Math.sin(kRad)*Math.max(0,Math.cos(kRad))*-0.3:0;
+  const key=state.rig.filter(L=>L.on).sort((a,b)=>b.i-a.i)[0];  // brightest light drives the ground shadow
+  const kRad=key?key.phi*Math.PI/180:0;
+  const shoff=key?Math.sin(kRad)*Math.max(0,Math.cos(kRad))*-0.3:0;
   const pc=pcan.getContext('2d');
   // draw far → near so nearer people overlap and the focused plane reads correctly
   const order=people.map((p,idx)=>({p,idx})).sort((a,b)=>dp(b.p)-dp(a.p));
@@ -1344,17 +1350,16 @@ function roundRect(x,y,w,h,r){
 const OVH={W:300,H:236,cx:150,cy:100,sc:23};
 function ovhPos(L){ return {x:OVH.cx+Math.sin(L.phi*Math.PI/180)*L.d*OVH.sc, y:OVH.cy+Math.cos(L.phi*Math.PI/180)*L.d*OVH.sc}; }
 function renderOverhead(){
-  const colors={key:cssVar('--accent'),fill:cssVar('--teal'),rim:cssVar('--violet')};
   const line=cssVar('--line'), faint=cssVar('--faint'), muted=cssVar('--muted'),
         cam=cssVar('--tv-cam'), tick=cssVar('--tv-tick'), text=cssVar('--text'), bg=cssVar('--panel-2');
   let pucks='';
-  for(const k of ['key','fill','rim']){
-    const L=state.lt[k], p=ovhPos(L);
-    pucks+=`<g class="puck" data-l="${k}" style="cursor:grab" opacity="${L.on?1:0.28}">
-      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="11" fill="${colors[k]}" stroke="${bg}" stroke-width="2"/>
-      <text x="${p.x.toFixed(1)}" y="${(p.y+3.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="${bg}">${k[0].toUpperCase()}</text>
+  state.rig.forEach((L,i)=>{
+    const p=ovhPos(L), col=cssVar(LCOLV[i]||'--text');
+    pucks+=`<g class="puck" data-i="${i}" style="cursor:grab" opacity="${L.on?1:0.28}">
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="11" fill="${col}" stroke="${bg}" stroke-width="2"/>
+      <text x="${p.x.toFixed(1)}" y="${(p.y+3.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="${bg}">${PLBL[i]||'L'}</text>
     </g>`;
-  }
+  });
   $('#ovh').innerHTML=`
   <svg viewBox="0 0 ${OVH.W} ${OVH.H}" xmlns="http://www.w3.org/2000/svg" id="ovhSvg" role="img" aria-label="Overhead lighting placement">
     ${[1,2,3,4].map(rr=>`<circle cx="${OVH.cx}" cy="${OVH.cy}" r="${rr*OVH.sc}" fill="none" stroke="${line}" stroke-dasharray="${rr===4?'':'3 5'}"/>`).join('')}
@@ -1370,15 +1375,15 @@ function renderOverhead(){
 let dragL=null;
 document.addEventListener('pointerdown',e=>{
   const g=e.target.closest('.puck'); if(!g) return;
-  dragL=g.dataset.l; e.preventDefault();
+  dragL=+g.dataset.i; e.preventDefault();
 });
 document.addEventListener('pointermove',e=>{
-  if(!dragL) return;
+  if(dragL===null) return;
   const svg=$('#ovhSvg'); if(!svg) return;
   const r=svg.getBoundingClientRect();
   const x=(e.clientX-r.left)/r.width*OVH.W - OVH.cx;
   const y=(e.clientY-r.top)/r.height*OVH.H - OVH.cy;
-  const L=state.lt[dragL];
+  const L=state.rig[dragL]; if(!L) return;
   L.d=Math.min(4,Math.max(0.5,Math.hypot(x,y)/OVH.sc));
   L.phi=Math.atan2(x,y)*180/Math.PI;
   if(!L.on) L.on=true;
@@ -1504,7 +1509,7 @@ function drawStats(res){
     {l:'Field of view', n:`${deg(res.fov.h)} × ${deg(res.fov.v)}`, s:`frame at subject ${res.frW.toFixed(2)} × ${res.frH.toFixed(2)} m`},
     {l:'Framing', n:framingLabel(frHp,subjH), s:`subject fills ${Math.round(subjH/frHp*100)}% of frame height · focused at ${fmtLen(state.s)}`},
   ];
-  if(state.lt.key.on&&Math.abs(state.lt.key.phi)<18&&state.lt.key.d<1)
+  if(state.rig.some(L=>L.on&&Math.abs(L.phi)<18&&L.d<1))
     cards.push({l:'Flash reach', n:`${Math.round(Math.pow(state.s/state.b,2)*100)}%`, s:`background gets (s/b)² of subject exposure — inverse square`});
   if(Math.abs(res.crop-1)>0.03)
     cards.push({l:'Full-frame equivalent', n:`≈ ${Math.round(res.f*res.crop)} mm ${ap}${fmtN(res.N*res.crop)}`, s:`crop factor ${res.crop.toFixed(2)}× (active area)`});
@@ -1563,8 +1568,8 @@ $('#shotsStrip').addEventListener('click',e=>{
     const s=shots[i]; if(!s) return;
     customBgImg=null; syncBgChips();
     Object.assign(state,JSON.parse(JSON.stringify(s.state)));
-    ensurePeople(state);
-    renderPeople(); render(); toast('Loaded "'+s.name+'"'+(s.custom?' — re-upload its backdrop photo':''));
+    ensurePeople(state); ensureLights(state);
+    renderPeople(); renderLights(); render(); toast('Loaded "'+s.name+'"'+(s.custom?' — re-upload its backdrop photo':''));
     return;
   }
   if(act==='del') shots.splice(i,1);
@@ -1623,12 +1628,6 @@ function syncInputs(){
   $('#distV').textContent=fmtLen(state.s);
   $('#bgdV').textContent=fmtLen(state.b);
   $('#peopleCount').textContent=state.people.length+(state.people.length===1?' person':' people');
-  for(const k of ['key','fill','rim']){
-    const row=document.querySelector(`.lrow[data-l="${k}"]`), L=state.lt[k];
-    row.querySelector('.lon').checked=L.on;
-    row.querySelector('.ltemp').value=L.t;
-    const ri=row.querySelector('.lint'); ri.value=L.i; paintSlider(ri);
-  }
 }
 function clampState(){
   state.f=Math.min(800,Math.max(5,state.f));
@@ -1724,13 +1723,37 @@ $('#modeSeg').addEventListener('click',e=>{
   state.f=fMem[state.mode];        // restore focal for the mode we're entering
   populateSensors(); populatePresets(); renderShots(); render();
 });
-$('#lscheme').addEventListener('change',e=>{applyScheme(e.target.value);render();});
-document.querySelectorAll('.lrow').forEach(row=>{
-  const k=row.dataset.l;
-  row.querySelector('.lon').addEventListener('change',e=>{state.lt[k].on=e.target.checked;markCustom();render();});
-  row.querySelector('.ltemp').addEventListener('change',e=>{state.lt[k].t=e.target.value;markCustom();render();});
-  row.querySelector('.lint').addEventListener('input',e=>{state.lt[k].i=+e.target.value;markCustom();render();});
+// ---- dynamic lighting rig UI ----
+const TEMPLBL={w:'3200K',n:'5600K',c:'7500K'};
+function renderLights(){
+  if(!state.rig.length){ $('#lightList').innerHTML='<div class="hint" style="font-size:11.5px">No lights — natural / ambient. Add one, or pick a setup above.</div>'; }
+  else $('#lightList').innerHTML=state.rig.map((L,i)=>`
+    <div class="lrow" data-i="${i}">
+      <input type="checkbox" class="lon" ${L.on?'checked':''} title="On / off">
+      <span class="ldot" style="background:${cssVar(LCOLV[i]||'--text')}"></span>
+      <span class="lname">${L.role||'Light'}</span>
+      <select class="mini ltemp">${['w','n','c'].map(v=>`<option value="${v}"${L.t===v?' selected':''}>${TEMPLBL[v]}</option>`).join('')}</select>
+      <input type="range" class="lint" min="0" max="100" step="1" value="${L.i}">
+      <button class="ldel" title="Remove light">✕</button>
+    </div>`).join('');
+  $('#addLight').style.display=state.rig.length>=6?'none':'';
+  document.querySelectorAll('#lightList .lint').forEach(paintSlider);
+}
+$('#lscheme').addEventListener('change',e=>{applyScheme(e.target.value);renderLights();render();});
+$('#lightList').addEventListener('change',e=>{
+  const row=e.target.closest('.lrow'); if(!row) return; const i=+row.dataset.i;
+  if(e.target.classList.contains('lon')){ state.rig[i].on=e.target.checked; markCustom(); render(); }
+  else if(e.target.classList.contains('ltemp')){ state.rig[i].t=e.target.value; markCustom(); render(); }
 });
+$('#lightList').addEventListener('input',e=>{
+  const row=e.target.closest('.lrow'); if(!row||!e.target.classList.contains('lint')) return;
+  state.rig[+row.dataset.i].i=+e.target.value; paintSlider(e.target); markCustom(); render();
+});
+$('#lightList').addEventListener('click',e=>{
+  const del=e.target.closest('.ldel'); if(!del) return;
+  state.rig.splice(+del.closest('.lrow').dataset.i,1); markCustom(); renderLights(); render();
+});
+$('#addLight').addEventListener('click',()=>{ addLight(); renderLights(); render(); });
 $('#tglLights').addEventListener('change',e=>{state.lights=e.target.checked;render();});
 $('#tglGrid').addEventListener('change',e=>{state.grid=e.target.checked;render();});
 $('#tglHud').addEventListener('change',e=>{state.hud=e.target.checked;render();});
@@ -1772,7 +1795,7 @@ $('#presets').addEventListener('click',e=>{
   Object.assign(state,rest);
   state.people=normPeople(ppl);
   applyScheme(ls||'none');
-  renderPeople();
+  renderPeople(); renderLights();
   render();
 });
 
@@ -1996,6 +2019,7 @@ populateSensors();
 populatePresets();
 renderShots();
 renderPeople();
+renderLights();
 syncBgChips();
 applyTheme(curTheme(),false);
 if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }catch(e){} }
