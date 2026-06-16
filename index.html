@@ -350,7 +350,7 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
   <aside id="railR">
     <div class="card">
       <h2>Presets</h2>
-      <div class="chips" id="presets"></div>
+      <select id="presets" aria-label="Load a preset"></select>
     </div>
 
     <div class="card">
@@ -1611,7 +1611,8 @@ function populateSensors(){
 }
 function populatePresets(){
   const list=state.mode==='cine'?CINE_PRESETS:PHOTO_PRESETS;
-  $('#presets').innerHTML=list.map((p,i)=>`<button data-i="${i}">${p.n}</button>`).join('');
+  $('#presets').innerHTML='<option value="" disabled selected>Choose a preset…</option>'+
+    list.map((p,i)=>`<option value="${i}">${p.n}</option>`).join('');
 }
 function syncInputs(){
   els.focal.value=M_F.toSlider(state.f);
@@ -1793,14 +1794,14 @@ const CINE_PRESETS=[
   {n:'Beach wide',       v:{cam:'a65',f:40,N:2.8,s:4,b:60,ar:'2.00',ppl:[{t:'man',skin:'tan',x:-0.7},{t:'woman',skin:'medium',x:0.7},{t:'child',skin:'medium',x:0}],scene:'beach',ls:'none'}},
   {n:'Doc handheld',     v:{cam:'s16',f:12,N:2,s:2,b:12,ar:'1.78',ppl:[{t:'man',skin:'medium'}],scene:'forest',ls:'none'}},
 ];
-$('#presets').addEventListener('click',e=>{
-  const b=e.target.closest('button'); if(!b) return;
+$('#presets').addEventListener('change',e=>{
   const list=state.mode==='cine'?CINE_PRESETS:PHOTO_PRESETS;
-  const p=list[+b.dataset.i]; if(!p) return;
+  const p=list[+e.target.value]; if(!p) return;
   const {ls,ppl,...rest}=p.v;
   Object.assign(state,rest);
   state.people=normPeople(ppl);
   applyScheme(ls||'none');
+  e.target.selectedIndex=0;            // reset back to the placeholder
   renderPeople(); renderLights();
   render();
 });
