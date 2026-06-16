@@ -151,7 +151,9 @@ details.about{border:1px solid var(--line);border-radius:14px;background:var(--p
 details.about summary{cursor:pointer;padding:13px 0;font-size:13px;color:var(--muted)}
 details.about .body{padding:2px 0 14px;color:var(--muted);font-size:13px}
 details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
-footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);font-size:12px}
+footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);font-size:12px;text-align:center}
+footer a{color:var(--muted);text-decoration:none}
+footer a:hover{color:var(--accent)}
 #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);padding:10px 18px;border-radius:12px;font-size:13px;transition:.25s;opacity:0;pointer-events:none;z-index:50}
 #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 /* guided tour */
@@ -381,7 +383,7 @@ footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);fon
 
 <div id="printSheet" aria-hidden="true"></div>
 
-<footer>FocalLab Studio · focallab.studio · an original build inspired by classic DoF calculators — not affiliated with dofsimulator.net · thin-lens approximation, camera at eye height · built by Jesse Wallace</footer>
+<footer>© 2026 <a href="https://jesseleewallace.com" target="_blank" rel="noopener">Jesse Wallace</a> · Not affiliated with dofsimulator.net</footer>
 <div id="toast">Link copied</div>
 
 <script>
@@ -1997,7 +1999,7 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change',e=>{
   function openMenu(){
     L.hidden=false; spot.classList.add('hide'); active=true; steps=[];
     $('#tourProg').textContent='Guided learning';
-    $('#tourTitle').textContent='Learn FocalLab';
+    $('#tourTitle').textContent='Learn FocalLab Studio';
     $('#tourBody').innerHTML=
       '<button class="opt" data-k="tour"><b>Take the quick tour</b><span>A short look at where everything is</span></button>'+
       '<button class="opt" data-k="photo"><b>Photography basics</b><span>New to cameras? Learn how a photo gets its look</span></button>'+
