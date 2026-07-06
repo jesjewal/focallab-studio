@@ -156,6 +156,21 @@ footer a{color:var(--muted);text-decoration:none}
 footer a:hover{color:var(--accent)}
 #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);padding:10px 18px;border-radius:12px;font-size:13px;transition:.25s;opacity:0;pointer-events:none;z-index:50}
 #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+/* AI generation modal */
+#aiModal{position:fixed;inset:0;z-index:220;display:flex;align-items:center;justify-content:center;background:rgba(4,7,12,.62)}
+#aiModal[hidden]{display:none}
+.aiCard{width:410px;max-width:calc(100vw - 28px);background:var(--panel);border:1px solid var(--line-2);border-radius:14px;padding:18px;box-shadow:0 14px 40px rgba(0,0,0,.5)}
+.aiCard h3{margin:2px 0 6px;font-size:16px}
+.aiCard .sub{font-size:12.5px;color:var(--muted);margin-bottom:10px;line-height:1.5}
+.aiCard .sub a{color:var(--accent);text-decoration:none}
+.aiCard textarea{width:100%;background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text);font:inherit;font-size:13.5px;padding:9px 10px;resize:vertical}
+.aiCard .keyin{width:100%;background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text);font-size:13px;padding:9px 10px;font-family:var(--mono)}
+.aiKey{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.aiRow{display:flex;gap:8px;align-items:center;margin-top:12px}
+#aiStatus{font-size:12.5px;color:var(--muted);min-height:17px;margin-top:9px}
+#aiStatus.err{color:var(--hot)}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line-2);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
 /* guided tour */
 #tourLayer{position:fixed;inset:0;z-index:200}
 #tourSpot{position:absolute;border-radius:12px;box-shadow:0 0 0 9999px rgba(4,7,12,.66);transition:all .25s ease;pointer-events:none;border:2px solid var(--accent)}
@@ -230,6 +245,25 @@ footer a:hover{color:var(--accent)}
   </div>
 </div>
 
+<div id="aiModal" hidden>
+  <div class="aiCard">
+    <h3 id="aiTitle">Generate with AI</h3>
+    <div class="sub" id="aiSub"></div>
+    <textarea id="aiPrompt" rows="3"></textarea>
+    <div class="aiKey" id="aiKeyBox" hidden>
+      <div class="sub">Paste your Google Gemini API key. It is saved only in this browser and used only to call Google directly — nothing goes through our servers. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free key</a></div>
+      <input type="password" id="aiKey" class="keyin" placeholder="AIza..." autocomplete="off">
+    </div>
+    <div id="aiStatus"></div>
+    <div class="aiRow">
+      <button class="btn small" id="aiCancel">Cancel</button>
+      <span style="flex:1"></span>
+      <button class="btn small" id="aiKeyClear" title="Forget the saved API key">Clear key</button>
+      <button class="btn small" id="aiGo">✨ Generate</button>
+    </div>
+  </div>
+</div>
+
 <main>
   <aside id="railL">
     <div class="card">
@@ -277,6 +311,7 @@ footer a:hover{color:var(--accent)}
       <div class="ctl">
         <div class="chips">
           <button id="bgUp">Upload backdrop…</button>
+          <button id="bgGen" title="Describe a backdrop and generate it with AI (your own Gemini key)">✨ Generate…</button>
           <button id="bgClear" style="display:none">✕ Clear</button>
         </div>
         <input type="file" id="bgFile" hidden accept="image/*">
@@ -284,7 +319,7 @@ footer a:hover{color:var(--accent)}
       <div class="ctl">
         <div class="row"><label>People</label><span class="val" id="peopleCount"></span></div>
         <div id="peopleList"></div>
-        <div class="chips" style="margin-top:2px"><button id="addPerson">＋ Add person</button></div>
+        <div class="chips" style="margin-top:2px"><button id="addPerson">＋ Add person</button><button id="aiPersonBtn" title="Describe a person and generate them with AI (your own Gemini key)">✨ AI person</button></div>
       </div>
       <div class="duo">
         <div class="ctl">
@@ -1151,11 +1186,12 @@ const HAIRS=['#241a12','#100e0c','#5a3c22','#7a5634','#9aa0a6'];
 const TYPEFIG={man:figMan,woman:figWoman,child:figChild,runner:figRunner,soccer:figSoccer,
   basketball:figBasketball,performer:figPerformer,cyclist:figCyclist,seated:figSeated,dog:figDog};
 const DEFH={man:1.78,woman:1.65,child:1.1,runner:1.78,soccer:1.78,
-  basketball:1.95,performer:1.72,cyclist:1.45,seated:1.3,dog:0.6};  // default heights, metres
+  basketball:1.95,performer:1.72,cyclist:1.45,seated:1.3,dog:0.6,ai:1.7};  // default heights, metres
 const TYPEAFY={man:0.916,woman:0.916,child:0.885,runner:0.895,soccer:0.905,
-  basketball:0.87,performer:0.916,cyclist:0.85,seated:0.855,dog:0.78};
+  basketball:0.87,performer:0.916,cyclist:0.85,seated:0.855,dog:0.78,ai:0.9};
 const TYPEAFX={man:0,woman:0,child:0,runner:0.135,soccer:-0.04,
-  basketball:0,performer:0,cyclist:0.18,seated:0,dog:0.4};
+  basketball:0,performer:0,cyclist:0.18,seated:0,dog:0.4,ai:0};
+const SPRITES={}; let spriteSeq=0;   // AI-generated people: session-only transparent sprites
 function skinC(id){const s=SKINS.find(x=>x.id===id);return s?s.c:SKINS[2].c;}
 function focusedPerson(){ // the person nearest the focus plane (what the AF box lands on)
   let best=1e9,fp=state.people[0];
@@ -1166,17 +1202,20 @@ function normPeople(arr){
   const a=(arr&&arr.length?arr:[{t:'woman'}]).slice(0,4);
   const cnt={};
   return a.map((p,i)=>{
-    const t=PTYPES.some(x=>x.id===p.t)?p.t:'woman';
+    // 'ai' people are valid only while their sprite lives in this session; otherwise degrade to a drawn figure
+    const t=(p.t==='ai'&&p.sprite&&SPRITES[p.sprite])?'ai':(PTYPES.some(x=>x.id===p.t)?p.t:'woman');
     const n=(cnt[t]=(cnt[t]||0)+1)-1;   // ordinal among same-type people → distinct colour each
-    return {
+    const out={
       t,
       skin:SKINS.some(x=>x.id===p.skin)?p.skin:SKINS[i%SKINS.length].id,
       x:Math.max(-6,Math.min(6,isFinite(+p.x)?+p.x:0)),  // lateral metres from the optical axis
       h:Math.max(0.6,Math.min(2.1,isFinite(+p.h)?+p.h:DEFH[t])),  // height, metres
       d:Math.max(0.3,Math.min(150,isFinite(+p.d)?+p.d:state.s)),  // distance from camera, metres
-      c:p.c||clothFor(t,n),
+      c:p.c||clothFor(t==='ai'?'man':t,n),
       hair:p.hair||HAIRS[i%HAIRS.length]
     };
+    if(t==='ai'){ out.sprite=p.sprite; out.label=p.label||'AI person'; }
+    return out;
   });
 }
 function ensurePeople(st){
@@ -1290,8 +1329,16 @@ function drawPeople(W,H,res,ppm,groundY){
         set(skinCol);
       },
     };
-    (TYPEFIG[p.t]||figWoman)(s);
-    applyFigLighting(pc,W,H,ox-0.34*hh,ox+0.34*hh,hh,(p.x||0),d,state.s);
+    let exMin=ox-0.34*hh, exMax=ox+0.34*hh;
+    if(p.t==='ai'&&SPRITES[p.sprite]){
+      // AI-generated person: transparent sprite, feet on the ground line, height in metres like everyone else
+      const im=SPRITES[p.sprite].img, w=hh*(im.width/im.height);
+      pc.drawImage(im, ox-w/2, fy-hh, w, hh);
+      exMin=ox-w/2; exMax=ox+w/2;
+    } else {
+      (TYPEFIG[p.t]||figWoman)(s);
+    }
+    applyFigLighting(pc,W,H,exMin,exMax,hh,(p.x||0),d,state.s);
     // composite with this person's blur
     ctx.save(); ctx.filter=blur?`blur(${blur}px)`:'none';
     ctx.drawImage(pcan,0,0); ctx.restore();
@@ -1666,9 +1713,11 @@ function renderPeople(){
   $('#peopleList').innerHTML=state.people.map((p,i)=>`
     <div class="prow" data-i="${i}">
       <div style="display:flex;gap:6px;align-items:center">
-        <select class="mini ptype" data-i="${i}" aria-label="Person type">${sopt(PTYPES,p.t)}</select>
+        ${p.t==='ai'
+          ? `<span style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">✨ ${p.label||'AI person'}</span>`
+          : `<select class="mini ptype" data-i="${i}" aria-label="Person type">${sopt(PTYPES,p.t)}</select>
         <select class="mini pskin" data-i="${i}" aria-label="Skin tone">${sopt(SKINS,p.skin)}</select>
-        <span class="swatch" style="background:${skinC(p.skin)}"></span>
+        <span class="swatch" style="background:${skinC(p.skin)}"></span>`}
         <span style="flex:1"></span>
         ${state.people.length>1?`<button class="pdel" data-i="${i}" title="Remove">✕</button>`:''}
       </div>
@@ -1689,6 +1738,7 @@ function renderPeople(){
       </div>
     </div>`).join('');
   $('#addPerson').style.display=state.people.length>=4?'none':'';
+  $('#aiPersonBtn').style.display=state.people.length>=4?'none':'';
   document.querySelectorAll('#peopleList .ppos, #peopleList .phgt, #peopleList .pdep').forEach(paintSlider);
 }
 $('#peopleList').addEventListener('change',e=>{
@@ -2020,6 +2070,102 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change',e=>{
     else if(e.key==='ArrowLeft'&&steps.length&&cur>0) showStep(cur-1);
   });
 })();
+
+// ---------- AI generation (Gemini image model, bring-your-own-key) ----------
+function gKey(){ try{ return localStorage.getItem('focallab.gemini')||''; }catch(e){ return ''; } }
+function setGKey(v){ try{ v?localStorage.setItem('focallab.gemini',v):localStorage.removeItem('focallab.gemini'); }catch(e){} }
+async function geminiImage(prompt,aspect){
+  const key=gKey(); if(!key) throw new Error('NOKEY');
+  const url='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key='+encodeURIComponent(key);
+  const call=body=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  let res=await call({contents:[{parts:[{text:prompt}]}],generationConfig:{responseModalities:['IMAGE'],imageConfig:{aspectRatio:aspect}}});
+  if(res.status===400){ // older API surface may not know imageConfig — retry without it
+    const t=await res.clone().json().catch(()=>({}));
+    if(/imageConfig|aspect/i.test(t.error?.message||'')) res=await call({contents:[{parts:[{text:prompt}]}],generationConfig:{responseModalities:['IMAGE']}});
+  }
+  if(!res.ok){
+    let msg='Request failed ('+res.status+')';
+    try{ const j=await res.json(); msg=j.error?.message||msg; }catch(e){}
+    if(res.status===400&&/API key|API_KEY/i.test(msg)) throw new Error('BADKEY');
+    if(res.status===403) throw new Error('BADKEY');
+    if(res.status===429) throw new Error('Your Gemini quota is used up for now — try again in a bit.');
+    throw new Error(msg);
+  }
+  const j=await res.json();
+  const part=(j.candidates?.[0]?.content?.parts||[]).find(pp=>pp.inlineData);
+  if(!part) throw new Error('No image came back — the prompt may have been blocked. Try different wording.');
+  return 'data:'+(part.inlineData.mimeType||'image/png')+';base64,'+part.inlineData.data;
+}
+function loadImg(src){ return new Promise((ok,bad)=>{ const im=new Image(); im.onload=()=>ok(im); im.onerror=()=>bad(new Error('Could not read the generated image.')); im.src=src; }); }
+function chromaKey(img){ // strip the uniform green backing → transparent sprite (with feathered edges + despill)
+  const c=document.createElement('canvas'); c.width=img.width; c.height=img.height;
+  const x=c.getContext('2d'); x.drawImage(img,0,0);
+  const d=x.getImageData(0,0,c.width,c.height), px=d.data;
+  for(let i=0;i<px.length;i+=4){
+    const r=px[i], g=px[i+1], b=px[i+2];
+    const k=g-Math.max(r,b);                 // greenness
+    if(k>60) px[i+3]=0;
+    else if(k>18){ px[i+3]=Math.min(px[i+3],Math.round(255*(1-(k-18)/42))); px[i+1]=Math.max(r,b); }
+  }
+  x.putImageData(d,0,0);
+  return c;
+}
+let aiMode='bg', aiBusy=false;
+function aiErr(m){ const s=$('#aiStatus'); s.textContent=m; s.classList.add('err'); }
+function openAI(mode){
+  aiMode=mode; aiBusy=false;
+  $('#aiTitle').textContent= mode==='bg' ? 'Generate a backdrop' : 'Generate a person';
+  $('#aiSub').textContent= mode==='bg'
+    ? 'Describe the background you want. It becomes the scene behind your subjects and blurs correctly with your lens settings. Generated images are not saved in links or saved looks.'
+    : 'Describe the person you want. They join the scene with their own position, height, and depth. Lighting tints on AI people are approximate. Not saved in links or saved looks.';
+  $('#aiPrompt').value=''; $('#aiPrompt').placeholder= mode==='bg' ? 'e.g. foggy pine forest at dawn, soft light' : 'e.g. older man in a red rain jacket';
+  $('#aiKeyBox').hidden=!!gKey();
+  $('#aiKeyClear').style.display=gKey()?'':'none';
+  const st=$('#aiStatus'); st.textContent=''; st.classList.remove('err');
+  $('#aiGo').disabled=false;
+  $('#aiModal').hidden=false; $('#aiPrompt').focus();
+}
+async function runAI(){
+  if(aiBusy) return;
+  const p=$('#aiPrompt').value.trim();
+  if(!p){ aiErr('Describe what you want first.'); return; }
+  const kIn=$('#aiKey').value.trim();
+  if(kIn){ setGKey(kIn); $('#aiKey').value=''; $('#aiKeyBox').hidden=true; $('#aiKeyClear').style.display=''; }
+  if(!gKey()){ $('#aiKeyBox').hidden=false; aiErr('Add your Gemini API key to generate.'); return; }
+  aiBusy=true; $('#aiGo').disabled=true;
+  const st=$('#aiStatus'); st.classList.remove('err');
+  st.innerHTML='<span class="spin"></span>Generating — this can take ~10 seconds…';
+  try{
+    if(aiMode==='bg'){
+      const prompt=`Photographic background plate for a photo shoot: ${p}. No people or animals in the foreground, no text or watermarks. Eye-level perspective, realistic natural lighting, everything in sharp focus.`;
+      customBgImg=await loadImg(await geminiImage(prompt,'16:9'));
+      syncBgChips(); render();
+      toast('Backdrop set — adjust background distance to taste');
+    } else {
+      if(state.people.length>=4) throw new Error('The scene is full (4 people). Remove someone first.');
+      const prompt=`Full-body photograph of ${p}, standing upright facing the camera, entire body visible from head to feet with a small margin, centered, relaxed neutral pose, on a perfectly uniform solid chroma-key green background (pure green, like #00B140). Even lighting, no shadows cast on the background, nothing touching the image edges, no text.`;
+      const keyed=chromaKey(await loadImg(await geminiImage(prompt,'9:16')));
+      const id='sp'+(++spriteSeq); SPRITES[id]={img:keyed,label:p.slice(0,26)};
+      state.people.push({t:'ai',sprite:id,label:p.slice(0,26),skin:'medium',x:0,h:1.7,d:state.s,c:'#888',hair:'#222'});
+      renderPeople(); render();
+      toast('AI person added — set their position, height, and depth');
+    }
+    $('#aiModal').hidden=true;
+  }catch(e){
+    if(e.message==='NOKEY'||e.message==='BADKEY'){
+      setGKey(''); $('#aiKeyBox').hidden=false; $('#aiKeyClear').style.display='none';
+      aiErr(e.message==='BADKEY'?'Google rejected that key — check it and try again.':'Add your Gemini API key to generate.');
+    } else aiErr(e.message||'Something went wrong.');
+  }
+  aiBusy=false; $('#aiGo').disabled=false;
+}
+$('#bgGen').addEventListener('click',()=>openAI('bg'));
+$('#aiPersonBtn').addEventListener('click',()=>openAI('person'));
+$('#aiGo').addEventListener('click',runAI);
+$('#aiPrompt').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); runAI(); } });
+$('#aiCancel').addEventListener('click',()=>{ if(!aiBusy) $('#aiModal').hidden=true; });
+$('#aiModal').addEventListener('click',e=>{ if(e.target.id==='aiModal'&&!aiBusy) $('#aiModal').hidden=true; });
+$('#aiKeyClear').addEventListener('click',()=>{ setGKey(''); $('#aiKey').value=''; $('#aiKeyBox').hidden=false; $('#aiKeyClear').style.display='none'; toast('Gemini key forgotten'); });
 
 // ---------- go ----------
 readHash();
