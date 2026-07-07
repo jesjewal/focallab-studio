@@ -122,6 +122,8 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .prow .ptype{flex:1.3}.prow .pskin{flex:1}
 .prow .swatch{width:15px;height:15px;border-radius:50%;border:1px solid var(--line-2);flex:none}
 .prow .pdel{background:none;border:0;color:var(--faint);cursor:pointer;font-size:13px;padding:0 2px}
+.prow .paf{background:var(--panel);border:1px solid var(--line-2);color:var(--faint);cursor:pointer;font-size:9.5px;font-weight:700;letter-spacing:.05em;border-radius:5px;padding:2px 6px;flex:none}
+.prow .paf.on{background:var(--good);border-color:var(--good);color:#000}
 .prow .pdel:hover{color:var(--hot)}
 .prow .ppos,.prow .phgt,.prow .pdep{flex:1;height:18px}
 .prow .ppos::-webkit-slider-thumb,.prow .phgt::-webkit-slider-thumb,.prow .pdep::-webkit-slider-thumb{width:13px;height:13px;margin-top:-4px}
@@ -531,7 +533,7 @@ const ASPECTS=[
 
 // ---------- state ----------
 const F_STOPS=[0.95,1.0,1.1,1.2,1.4,1.6,1.8,2,2.2,2.5,2.8,3.2,3.5,4,4.5,5,5.6,6.3,7.1,8,9,10,11,13,14,16,18,20,22,25,29,32];
-const state={mode:'photo', cam:'ff', o:'l', ar:'2.39', f:85, N:1.8, s:2.5, b:18,
+const state={mode:'photo', cam:'ff', o:'l', ar:'2.39', f:85, N:1.8, s:2.5, b:18, afP:-1,
   people:[{t:'woman',skin:'medium',x:0,h:1.65,c:'#c2566f',hair:'#241a12'}],
   scene:'city', lights:true, grid:false, hud:true,
   ls:'none',
@@ -858,6 +860,26 @@ function worldFor(id){ return WORLDS[id]||(WORLDS[id]=genWorldFor(id)); }
 
 // ---------- canvas + sprites ----------
 const cv=$('#vf'), ctx=cv.getContext('2d');
+const PHIT=[]; // per-frame person hitboxes (canvas px) for click-to-focus
+cv.addEventListener('mousemove',e=>{
+  const r=cv.getBoundingClientRect();
+  const x=(e.clientX-r.left)*(cv.width/r.width), y=(e.clientY-r.top)*(cv.height/r.height);
+  cv.style.cursor=PHIT.some(h=>x>=h.x0&&x<=h.x1&&y>=h.y0&&y<=h.y1)?'pointer':'';
+});
+cv.addEventListener('click',e=>{
+  const r=cv.getBoundingClientRect();
+  const x=(e.clientX-r.left)*(cv.width/r.width), y=(e.clientY-r.top)*(cv.height/r.height);
+  for(let k=PHIT.length-1;k>=0;k--){ // last drawn = nearest, so it wins overlaps
+    const h=PHIT[k];
+    if(x>=h.x0&&x<=h.x1&&y>=h.y0&&y<=h.y1){
+      const p=state.people[h.i]; if(!p) return;
+      state.s=p.d||state.s;
+      if(state.afP>=0) state.afP=h.i;        // an active AF lock follows the person you pick
+      renderPeople(); render();
+      return;
+    }
+  }
+});
 let off1=document.createElement('canvas'), off2=document.createElement('canvas'), pcan=document.createElement('canvas');
 const spriteCache={};
 function lightSprite(color){
@@ -1248,6 +1270,7 @@ const TYPEAFX={man:0,woman:0,child:0,runner:0.135,soccer:-0.04,
 const SPRITES={}; let spriteSeq=0;   // AI-generated people: session-only transparent sprites
 function skinC(id){const s=SKINS.find(x=>x.id===id);return s?s.c:SKINS[2].c;}
 function focusedPerson(){ // the person nearest the focus plane (what the AF box lands on)
+  if(state.afP>=0&&state.people[state.afP]) return state.people[state.afP]; // AF lock wins
   let best=1e9,fp=state.people[0];
   for(const p of state.people){ const dd=Math.abs((p.d||state.s)-state.s); if(dd<best){best=dd;fp=p;} }
   return fp;
@@ -1341,6 +1364,7 @@ function applyFigLighting(pc,W,H,minX,maxX,refHH,pLat,pDepth,focusDepth){
   pc.globalCompositeOperation='source-over';
 }
 function drawPeople(W,H,res,ppm,groundY){
+  PHIT.length=0; // rebuilt every frame: screen-space hitboxes for click-to-focus
   const people=state.people.length?state.people:[{t:'woman',skin:'medium',x:0,h:DEFH.woman,d:state.s,c:clothFor('woman',0),hair:HAIRS[0]}];
   // each person stands at their own distance from camera; off the focus plane they soften (real DoF)
   const ph=p=>(p.h||DEFH[p.t]||1.7);
@@ -1351,7 +1375,7 @@ function drawPeople(W,H,res,ppm,groundY){
   const pc=pcan.getContext('2d');
   // draw far → near so nearer people overlap and the focused plane reads correctly
   const order=people.map((p,idx)=>({p,idx})).sort((a,b)=>dp(b.p)-dp(a.p));
-  for(const {p} of order){
+  for(const {p,idx} of order){
     const d=dp(p), ppmD=ppm(d), fy=groundY(d), hh=ph(p)*ppmD, ox=W/2+(p.x||0)*ppmD;
     const disc=discPx(res,d,H);                 // blur disc (px); 0 at the focus plane
     const blur=disc>1?Math.min(disc*0.45,46):0;
@@ -1393,6 +1417,7 @@ function drawPeople(W,H,res,ppm,groundY){
       (TYPEFIG[p.t]||figWoman)(s);
     }
     applyFigLighting(pc,W,H,exMin,exMax,hh,(p.x||0),d,state.s);
+    PHIT.push({i:idx, x0:exMin, x1:exMax, y0:fy-hh*1.05, y1:fy+hh*0.03});
     // composite with this person's blur
     ctx.save(); ctx.filter=blur?`blur(${blur}px)`:'none';
     ctx.drawImage(pcan,0,0); ctx.restore();
@@ -1758,7 +1783,11 @@ function render(){
 }
 els.focal.addEventListener('input',e=>{state.f=M_F.fromSlider(+e.target.value);render();});
 els.apert.addEventListener('input',e=>{state.N=F_STOPS[+e.target.value];render();});
-els.dist.addEventListener('input',e=>{state.s=M_S.fromSlider(+e.target.value);render();});
+els.dist.addEventListener('input',e=>{
+  state.s=M_S.fromSlider(+e.target.value);
+  if(state.afP>=0){ state.afP=-1; document.querySelectorAll('.paf.on').forEach(b=>b.classList.remove('on')); } // manual focus releases the lock
+  render();
+});
 els.bgd.addEventListener('input',e=>{state.b=M_B.fromSlider(+e.target.value);render();});
 $('#cam').addEventListener('change',e=>{state.cam=e.target.value;render();});
 // ---- people roster UI ----
@@ -1773,6 +1802,7 @@ function renderPeople(){
         <select class="mini pskin" data-i="${i}" aria-label="Skin tone">${sopt(SKINS,p.skin)}</select>
         <span class="swatch" style="background:${skinC(p.skin)}"></span>`}
         <span style="flex:1"></span>
+        <button class="paf${state.afP===i?' on':''}" data-i="${i}" title="AF lock — keep focus on this person (only one at a time)">AF</button>
         ${state.people.length>1?`<button class="pdel" data-i="${i}" title="Remove">✕</button>`:''}
       </div>
       <div style="display:flex;gap:7px;align-items:center;margin-top:5px">
@@ -1817,12 +1847,23 @@ $('#peopleList').addEventListener('input',e=>{
     const dep=e.target.closest('.pdep'); if(!dep) return;
     const i=+dep.dataset.i; state.people[i].d=M_S.fromSlider(+dep.value); paintSlider(dep);
     const v=document.querySelector(`.pdepv[data-i="${i}"]`); if(v) v.textContent=fmtLen(state.people[i].d);
+    if(state.afP===i) state.s=state.people[i].d;   // AF lock: focus follows this person
     render();
   }
 });
 $('#peopleList').addEventListener('click',e=>{
+  const af=e.target.closest('.paf');
+  if(af){
+    const i=+af.dataset.i;
+    state.afP=(state.afP===i)?-1:i;          // exclusive: switching one on switches the others off
+    if(state.afP===i) state.s=state.people[i].d||state.s;
+    renderPeople(); render();
+    return;
+  }
   const del=e.target.closest('.pdel'); if(!del||state.people.length<=1) return;
-  state.people.splice(+del.dataset.i,1); renderPeople(); render();
+  const di=+del.dataset.i;
+  if(state.afP===di) state.afP=-1; else if(state.afP>di) state.afP--;
+  state.people.splice(di,1); renderPeople(); render();
 });
 $('#addPerson').addEventListener('click',()=>{ addPerson(); renderPeople(); render(); });
 $('#scene').addEventListener('change',e=>{state.scene=e.target.value;render();});
