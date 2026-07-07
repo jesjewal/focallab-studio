@@ -119,7 +119,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .lrow input[type=range]{flex:1;height:18px}
 .lrow input[type=range]::-webkit-slider-thumb{width:13px;height:13px;margin-top:-4px}
 .prow{background:var(--panel-2);border:1px solid var(--line-2);border-radius:9px;padding:7px 8px;margin-bottom:6px}
-.prow .ptype{flex:1.3}.prow .pskin{flex:1}
+.prow .ptype{flex:1.3;min-width:0}.prow .pskin{flex:1;min-width:0}
 .prow .swatch{width:15px;height:15px;border-radius:50%;border:1px solid var(--line-2);flex:none}
 .prow .pdel{background:none;border:0;color:var(--faint);cursor:pointer;font-size:13px;padding:0 2px}
 .prow .paf{background:var(--panel);border:1px solid var(--line-2);color:var(--faint);cursor:pointer;font-size:9.5px;font-weight:700;letter-spacing:.05em;border-radius:5px;padding:2px 6px;flex:none}
@@ -874,7 +874,7 @@ cv.addEventListener('click',e=>{
     if(x>=h.x0&&x<=h.x1&&y>=h.y0&&y<=h.y1){
       const p=state.people[h.i]; if(!p) return;
       state.s=p.d||state.s;
-      if(state.afP>=0) state.afP=h.i;        // an active AF lock follows the person you pick
+      state.afP=h.i;                         // clicking a subject always moves the AF lock to them
       renderPeople(); render();
       return;
     }
