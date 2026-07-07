@@ -139,6 +139,17 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .card.min h2,.card.min .rowhead{margin-bottom:0}
 .card.min{padding-top:11px;padding-bottom:11px}
 .frame{position:relative;background:#000;border:1px solid var(--line);border-radius:14px;padding:8px;width:fit-content;max-width:100%;margin:0 auto;flex:0 0 auto}
+/* AF-style corner brackets around the viewfinder, like framing marks on a camera */
+.frame::after{content:'';position:absolute;inset:-9px;pointer-events:none;opacity:.7;background:
+  linear-gradient(var(--text),var(--text)) 0 0/18px 2px,
+  linear-gradient(var(--text),var(--text)) 0 0/2px 18px,
+  linear-gradient(var(--text),var(--text)) 100% 0/18px 2px,
+  linear-gradient(var(--text),var(--text)) 100% 0/2px 18px,
+  linear-gradient(var(--text),var(--text)) 0 100%/18px 2px,
+  linear-gradient(var(--text),var(--text)) 0 100%/2px 18px,
+  linear-gradient(var(--text),var(--text)) 100% 100%/18px 2px,
+  linear-gradient(var(--text),var(--text)) 100% 100%/2px 18px;
+  background-repeat:no-repeat}
 canvas#vf{display:block;width:auto;height:auto;border-radius:8px}
 /* window-tracking caps: shrinking the window never grows the frame;
    the px floor keeps phones usable; cqw keeps it inside the column */
@@ -169,7 +180,12 @@ details.about{border:1px solid var(--line);border-radius:14px;background:var(--p
 details.about summary{cursor:pointer;padding:13px 0;font-size:13px;color:var(--muted)}
 details.about .body{padding:2px 0 14px;color:var(--muted);font-size:13px}
 details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
-footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);font-size:12px;text-align:center}
+/* film strip divider above the footer */
+#filmStrip{max-width:1560px;margin:26px auto 16px;padding:0 20px}
+#filmStrip .fs{height:22px;border-top:2px solid var(--text);border-bottom:2px solid var(--text);padding:5px 0;opacity:.45;
+  -webkit-mask:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+#filmStrip .fs i{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--text) 0 15px,transparent 15px 33px)}
+footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;text-align:center}
 footer a{color:var(--muted);text-decoration:none}
 footer a:hover{color:var(--accent)}
 #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);padding:10px 18px;border-radius:12px;font-size:13px;transition:.25s;opacity:0;pointer-events:none;z-index:50}
@@ -455,6 +471,7 @@ footer a:hover{color:var(--accent)}
 
 <div id="printSheet" aria-hidden="true"></div>
 
+<div id="filmStrip" aria-hidden="true"><div class="fs"><i></i></div></div>
 <footer>© 2026 <a href="https://jesseleewallace.com" target="_blank" rel="noopener">Jesse Wallace</a> · Not affiliated with dofsimulator.net</footer>
 <div id="toast">Link copied</div>
 
