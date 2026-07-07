@@ -6,3 +6,10 @@
 
 # Local Netlify folder
 .netlify
+
+# Raw logo source scans (processed into fcl-logo.png / fcl-icon.png)
+fcl-logo-black.jpg
+fcl-logo-white.jpg
+Icon black.jpg
+fcl-logo-black.png
+fcl-logo-white.png
