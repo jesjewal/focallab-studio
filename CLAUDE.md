@@ -54,7 +54,9 @@ curl -s https://focallab-studio.netlify.app/ | grep -c "<marker>" # new markup p
 - **Themes:** dark = true black `#000` + neutral grays; light = pure white. All vars in `:root` / `html.light`. Accent amber `#f0a93c` (dark) / `#c07300` (light). Functional colors: `--good` (AF on), `--teal`, `--hot`.
 - **App bar** (`#appBar`): flask mark `fcl-mark.png` (40px, `filter:invert(1)` in dark) + live-text wordmark (`.wordmark`, letterspaced caps, STUDIO sub-line) left; toolbar (`#topbtns`: Simple/Pro seg, Learn, units, theme, share) right; 1px bottom border. The full lockup image appears ONLY in og-card/README — not in the UI.
 - **Kept motifs:** AF corner brackets on `.frame::after`; small bubble markers on pane titles (fill amber when collapsed). **Removed on purpose:** ruler bar, film-strip divider, graph-paper grid.
-- **Known debt (next design pass, "C-pass"):** accent is still overused (mode pill, all sliders, all values) — reserve it for values/active states; type scale is small (10–13px labels); person rows are dense slider stacks. Longer-term direction Jesse liked: camera-first layout (viewfinder hero, bottom tab deck) — mock it up before building.
+- **Accent discipline (C-pass, done 2026-07-11):** amber is reserved for DATA VALUES only (`.val`, `.stat em`, counts). Controls are monochrome ink: slider fills use `--fill`, active segs/pills are `var(--text)` on `var(--bg)`, toggles ink. Do not style new controls with the accent.
+- **Roster pattern:** only the selected person (`selP`, session-only) shows the full editor; others render as `.prow.slim` one-line rows (swatch · name · depth · AF · ✕). Canvas clicks, Add person, and upload/AI adds set `selP` to that person. Keep this pattern for any new per-person controls.
+- **Longer-term direction Jesse liked:** camera-first layout (viewfinder hero, bottom tab deck) — mock it up before building.
 
 ## Brand assets (regenerate with PIL — sources gitignored)
 

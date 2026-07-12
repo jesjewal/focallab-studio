@@ -35,7 +35,7 @@ try{
   --text:#f2f2f2; --muted:#9c9c9c; --faint:#6d6d6d;
   --accent:#f0a93c; --accent-soft:rgba(240,169,60,.14);
   --teal:#62d2c3; --good:#5dd97c; --violet:#b08cff; --hot:#ff8c5a;
-  --track:#2c2c2c; --seg-on:#2a2a2a; --tv-tick:#3d3d3d; --tv-cam:#c2c2c2;
+  --track:#2c2c2c; --fill:#cfcfcf; --seg-on:#2a2a2a; --tv-tick:#3d3d3d; --tv-cam:#c2c2c2;
   --accent-rgb:240,169,60; --good-rgb:93,217,124;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
@@ -46,7 +46,7 @@ html.light{
   --text:#141414; --muted:#6a6a6a; --faint:#949494;
   --accent:#c07300; --accent-soft:rgba(192,115,0,.12);
   --teal:#0f8d7f; --good:#1f9e4b; --violet:#6d4fd2; --hot:#e06530;
-  --track:#dedede; --seg-on:#e9e9e9; --tv-tick:#bdbdbd; --tv-cam:#7d7d7d;
+  --track:#dedede; --fill:#4a4a4a; --seg-on:#e9e9e9; --tv-tick:#bdbdbd; --tv-cam:#7d7d7d;
   --accent-rgb:207,125,10; --good-rgb:31,158,75;
   color-scheme:light;
 }
@@ -66,7 +66,7 @@ html.light .markImg{filter:none}
 .btn.icon{padding:8px 12px;font-size:15px;line-height:1}
 main{display:grid;grid-template-columns:286px minmax(0,1fr) 286px;gap:13px;max-width:1560px;margin:0 auto;padding:10px 18px 30px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px}
-.card h2{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:0 0 9px;font-weight:600}
+.card h2{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:0 0 9px;font-weight:600}
 /* bubble marker before each pane title — echoes the bubbles rising from the flask */
 .card h2.clps::before{content:'';width:5px;height:5px;border-radius:50%;border:1px solid var(--muted);margin-right:8px;flex:none}
 .card.min h2.clps::before{background:var(--accent);border-color:var(--accent)}
@@ -80,7 +80,7 @@ aside .card{margin-bottom:10px}
 #topbtns{display:flex;flex-wrap:wrap;gap:8px}
 #vfSeg{position:absolute;top:14px;right:14px;z-index:5;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);border-color:rgba(255,255,255,.14)}
 #vfSeg button{color:#cdd6e2;padding:5px 9px}
-#vfSeg button.on{background:rgba(240,169,60,.92);color:#000}
+#vfSeg button.on{background:rgba(255,255,255,.92);color:#000}
 .vfbar .hint{color:var(--faint);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
 .seg.mini{padding:2px;gap:2px}
 .seg.mini button{padding:3px 12px;font-size:11.5px}
@@ -92,26 +92,26 @@ select{width:100%;background:var(--panel-2);border:1px solid var(--line-2);color
 select.mini{width:auto;padding:4px 24px 4px 8px;font-size:11.5px;border-radius:7px}
 select:disabled{opacity:.45}
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:0;--p:50%}
-input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--accent) var(--p),var(--track) var(--p))}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:#fff;border:2px solid var(--accent);margin-top:-6px;box-shadow:0 1px 5px rgba(0,0,0,.5);cursor:grab}
-input[type=range]::-moz-range-track{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--accent) var(--p),var(--track) var(--p))}
-input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--accent);cursor:grab}
+input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--fill) var(--p),var(--track) var(--p))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:#fff;border:2px solid var(--fill);margin-top:-6px;box-shadow:0 1px 5px rgba(0,0,0,.5);cursor:grab}
+input[type=range]::-moz-range-track{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--fill) var(--p),var(--track) var(--p))}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--fill);cursor:grab}
 .seg{display:flex;background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;padding:3px;gap:3px}
 .seg button{flex:1;background:transparent;border:0;color:var(--muted);padding:7px 0;border-radius:8px;font-size:13px;cursor:pointer}
 .seg button.on{background:var(--seg-on);color:var(--text)}
-.seg.big button.on{background:var(--accent);color:#000;font-weight:600}
+.seg.big button.on{background:var(--text);color:var(--bg);font-weight:600}
 .chips{display:flex;flex-wrap:wrap;gap:7px}
 #presets{flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px}
 #presets button{white-space:nowrap}
 .chips button{background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);font-size:12px;border-radius:999px;padding:6px 11px;cursor:pointer;transition:.15s}
 .chips button:hover{border-color:var(--accent);color:var(--accent)}
-.chips button.on{border-color:var(--accent);color:var(--accent)}
+.chips button.on{border-color:var(--text);color:var(--text)}
 .tgl{display:flex;align-items:center;justify-content:space-between;padding:7px 0;font-size:13px}
 .tgl input{display:none}
 .tgl .sw{width:34px;height:20px;border-radius:999px;background:var(--track);position:relative;transition:.15s;cursor:pointer;flex:none}
 .tgl .sw::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#90a4b8;transition:.15s}
-.tgl input:checked + .sw{background:var(--accent)}
-.tgl input:checked + .sw::after{left:17px;background:#000}
+.tgl input:checked + .sw{background:var(--text)}
+.tgl input:checked + .sw::after{left:17px;background:var(--bg)}
 .lrow{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:12px}
 .lrow .ldot{width:9px;height:9px;border-radius:50%;flex:none}
 .lrow .lname{width:34px;flex:none;color:var(--muted);white-space:nowrap;overflow:hidden}
@@ -127,6 +127,10 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .prow .paf{background:var(--panel);border:1px solid var(--line-2);color:var(--faint);cursor:pointer;font-size:9.5px;font-weight:700;letter-spacing:.05em;border-radius:5px;padding:2px 6px;flex:none}
 .prow .paf.on{background:var(--good);border-color:var(--good);color:#000}
 .prow .pdel:hover{color:var(--hot)}
+.prow.slim{display:flex;align-items:center;gap:7px;cursor:pointer;padding:6px 8px}
+.prow.slim:hover{border-color:var(--muted)}
+.prow.slim .pname{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow.slim .psum{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--muted);flex:none}
 .prow .ppos,.prow .phgt,.prow .pdep{flex:1;height:18px}
 .prow .ppos::-webkit-slider-thumb,.prow .phgt::-webkit-slider-thumb,.prow .pdep::-webkit-slider-thumb{width:13px;height:13px;margin-top:-4px}
 #ovh{margin-top:4px}
@@ -166,10 +170,10 @@ body.vf-l canvas#vf{max-width:max(54vw,340px);max-width:min(97cqw,max(54vw,340px
 #stage > * + *{margin-top:10px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:8px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:8px 11px}
-.stat .lbl{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+.stat .lbl{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
 .stat .num{font-family:var(--mono);font-size:14.5px;margin-top:3px;color:var(--text);white-space:nowrap}
 .stat .num em{font-style:normal;color:var(--accent)}
-.stat .sub{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4}
+.stat .sub{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
 #topview svg{display:block;width:100%;height:auto}
 .rowhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
@@ -873,6 +877,7 @@ cv.addEventListener('click',e=>{
       const p=state.people[h.i]; if(!p) return;
       state.s=p.d||state.s;
       state.afP=h.i;                         // clicking a subject always moves the AF lock to them
+      selP=h.i;                              // and opens their editor in the roster
       renderPeople(); render();
       return;
     }
@@ -1789,9 +1794,25 @@ els.dist.addEventListener('input',e=>{
 els.bgd.addEventListener('input',e=>{state.b=M_B.fromSlider(+e.target.value);render();});
 $('#cam').addEventListener('change',e=>{state.cam=e.target.value;render();});
 // ---- people roster UI ----
+let selP=0;   // which roster row shows the full editor (session-only)
 function renderPeople(){
   const sopt=(arr,sel)=>arr.map(o=>`<option value="${o.id}"${o.id===sel?' selected':''}>${o.name}</option>`).join('');
-  $('#peopleList').innerHTML=state.people.map((p,i)=>`
+  if(selP>=state.people.length) selP=state.people.length-1;
+  if(selP<0) selP=0;
+  $('#peopleList').innerHTML=state.people.map((p,i)=>{
+    const afBtn=`<button class="paf${state.afP===i?' on':''}" data-i="${i}" title="AF lock — keep focus on this person (only one at a time)">AF</button>`;
+    const delBtn=state.people.length>1?`<button class="pdel" data-i="${i}" title="Remove">✕</button>`:'';
+    if(i!==selP){
+      const name=p.t==='ai'?`✨ ${p.label||'AI person'}`:(PTYPES.find(x=>x.id===p.t)||{name:p.t}).name;
+      return `
+    <div class="prow slim" data-sel="${i}" title="Click to edit this person">
+      <span class="swatch" style="background:${skinC(p.skin)}"></span>
+      <span class="pname">${name}</span>
+      <span class="psum">${fmtLen(p.d||state.s)}</span>
+      ${afBtn}${delBtn}
+    </div>`;
+    }
+    return `
     <div class="prow" data-i="${i}">
       <div style="display:flex;gap:6px;align-items:center">
         ${p.t==='ai'
@@ -1800,25 +1821,25 @@ function renderPeople(){
         <select class="mini pskin" data-i="${i}" aria-label="Skin tone">${sopt(SKINS,p.skin)}</select>
         <span class="swatch" style="background:${skinC(p.skin)}"></span>`}
         <span style="flex:1"></span>
-        <button class="paf${state.afP===i?' on':''}" data-i="${i}" title="AF lock — keep focus on this person (only one at a time)">AF</button>
-        ${state.people.length>1?`<button class="pdel" data-i="${i}" title="Remove">✕</button>`:''}
+        ${afBtn}
+        ${delBtn}
       </div>
       <div style="display:flex;gap:7px;align-items:center;margin-top:5px">
-        <span style="font-size:11px;color:var(--muted);width:26px">Pos</span>
+        <span style="font-size:11.5px;color:var(--muted);width:26px">Pos</span>
         <input type="range" class="ppos" data-i="${i}" min="-400" max="400" step="5" value="${Math.round((p.x||0)*100)}">
-        <span class="pposv" data-i="${i}" style="font-family:var(--mono);font-size:10.5px;color:var(--muted);width:46px;text-align:right">${posLabel(p.x||0)}</span>
+        <span class="pposv" data-i="${i}" style="font-family:var(--mono);font-size:11px;color:var(--muted);width:46px;text-align:right">${posLabel(p.x||0)}</span>
       </div>
       <div style="display:flex;gap:7px;align-items:center;margin-top:4px">
-        <span style="font-size:11px;color:var(--muted);width:26px">Ht</span>
+        <span style="font-size:11.5px;color:var(--muted);width:26px">Ht</span>
         <input type="range" class="phgt" data-i="${i}" min="60" max="210" step="1" value="${Math.round((p.h||DEFH[p.t])*100)}">
-        <span class="phgtv" data-i="${i}" style="font-family:var(--mono);font-size:10.5px;color:var(--muted);width:46px;text-align:right">${fmtLen(p.h||DEFH[p.t])}</span>
+        <span class="phgtv" data-i="${i}" style="font-family:var(--mono);font-size:11px;color:var(--muted);width:46px;text-align:right">${fmtLen(p.h||DEFH[p.t])}</span>
       </div>
       <div style="display:flex;gap:7px;align-items:center;margin-top:4px">
-        <span style="font-size:11px;color:var(--muted);width:26px">Depth</span>
+        <span style="font-size:11.5px;color:var(--muted);width:26px">Depth</span>
         <input type="range" class="pdep" data-i="${i}" min="0" max="1000" step="1" value="${M_S.toSlider(p.d||state.s)}">
-        <span class="pdepv" data-i="${i}" style="font-family:var(--mono);font-size:10.5px;color:var(--muted);width:46px;text-align:right">${fmtLen(p.d||state.s)}</span>
+        <span class="pdepv" data-i="${i}" style="font-family:var(--mono);font-size:11px;color:var(--muted);width:46px;text-align:right">${fmtLen(p.d||state.s)}</span>
       </div>
-    </div>`).join('');
+    </div>`;}).join('');
   $('#addPerson').style.display=state.people.length>=4?'none':'';
   $('#aiPersonBtn').style.display=state.people.length>=4?'none':'';
   document.querySelectorAll('#peopleList .ppos, #peopleList .phgt, #peopleList .pdep').forEach(paintSlider);
@@ -1858,12 +1879,18 @@ $('#peopleList').addEventListener('click',e=>{
     renderPeople(); render();
     return;
   }
-  const del=e.target.closest('.pdel'); if(!del||state.people.length<=1) return;
-  const di=+del.dataset.i;
-  if(state.afP===di) state.afP=-1; else if(state.afP>di) state.afP--;
-  state.people.splice(di,1); renderPeople(); render();
+  const del=e.target.closest('.pdel');
+  if(del&&state.people.length>1){
+    const di=+del.dataset.i;
+    if(state.afP===di) state.afP=-1; else if(state.afP>di) state.afP--;
+    if(selP===di) selP=Math.max(0,di-1); else if(selP>di) selP--;
+    state.people.splice(di,1); renderPeople(); render();
+    return;
+  }
+  const sel=e.target.closest('.prow.slim');
+  if(sel){ selP=+sel.dataset.sel; renderPeople(); }
 });
-$('#addPerson').addEventListener('click',()=>{ addPerson(); renderPeople(); render(); });
+$('#addPerson').addEventListener('click',()=>{ addPerson(); selP=state.people.length-1; renderPeople(); render(); });
 $('#scene').addEventListener('change',e=>{state.scene=e.target.value;render();});
 $('#ar').addEventListener('change',e=>{state.ar=e.target.value;render();});
 $('#orient').addEventListener('click',e=>{const b=e.target.closest('button');if(b){state.o=b.dataset.o;render();}});
@@ -2270,6 +2297,7 @@ $('#avAdd').addEventListener('click',()=>{
   if(state.people.length>=4){ toast('The scene is full (4 people) — remove someone first'); return; }
   const id='sp'+(++spriteSeq); SPRITES[id]={img:avResult,label:avName};
   state.people.push({t:'ai',sprite:id,label:avName,ico:'📷',skin:'medium',x:0,h:1.75,d:state.s,c:'#888',hair:'#222'});
+  selP=state.people.length-1;
   $('#avModal').hidden=true; renderPeople(); render();
   toast('Person added — set their position, height, and depth');
 });
@@ -2352,6 +2380,7 @@ async function runAI(){
       const keyed=chromaKey(await loadImg(await geminiImage(prompt,'9:16')));
       const id='sp'+(++spriteSeq); SPRITES[id]={img:keyed,label:p.slice(0,26)};
       state.people.push({t:'ai',sprite:id,label:p.slice(0,26),skin:'medium',x:0,h:1.7,d:state.s,c:'#888',hair:'#222'});
+      selP=state.people.length-1;
       renderPeople(); render();
       toast('AI person added — set their position, height, and depth');
     }
