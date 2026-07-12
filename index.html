@@ -144,6 +144,9 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 #stage{container-type:inline-size}
 .flow{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center}
 .flow .stats{width:100%}
+/* simple / pro modes — Simple hides the deep controls */
+body.ui-simple .proOnly{display:none !important}
+body.ui-simple .stat.pro{display:none}
 /* collapsible panes */
 .card h2.clps{cursor:pointer;user-select:none;display:flex;align-items:center}
 .card h2.clps::after{content:'▾';margin-left:auto;padding-left:8px;font-size:9px;color:var(--faint);transition:transform .15s}
@@ -352,7 +355,7 @@ footer a:hover{color:var(--accent)}
           <button data-o="p">Portrait</button>
         </div>
       </div>
-      <div class="ctl" id="arCtl" style="display:none">
+      <div class="ctl proOnly" id="arCtl" style="display:none">
         <div class="row"><label for="ar">Aspect ratio</label></div>
         <select id="ar" aria-label="Aspect ratio"></select>
       </div>
@@ -378,7 +381,7 @@ footer a:hover{color:var(--accent)}
         <div class="row"><label for="scene">Location</label></div>
         <select id="scene" aria-label="Location"></select>
       </div>
-      <div class="ctl">
+      <div class="ctl proOnly">
         <div class="chips">
           <button id="bgUp">Upload backdrop…</button>
           <button id="bgGen" title="Describe a backdrop and generate it with AI (your own Gemini key)">✨ Generate…</button>
@@ -389,7 +392,7 @@ footer a:hover{color:var(--accent)}
       <div class="ctl">
         <div class="row"><label>People</label><span class="val" id="peopleCount"></span></div>
         <div id="peopleList"></div>
-        <div class="chips" style="margin-top:2px"><button id="addPerson">＋ Add person</button><button id="upPersonBtn" title="Upload a photo of a person — the background is removed so they can stand in the scene">⬆ Upload person</button><button id="aiPersonBtn" title="Describe a person and generate them with AI (your own Gemini key)">✨ AI person</button></div>
+        <div class="chips" style="margin-top:2px"><button id="addPerson">＋ Add person</button><button id="upPersonBtn" class="proOnly" title="Upload a photo of a person — the background is removed so they can stand in the scene">⬆ Upload person</button><button id="aiPersonBtn" class="proOnly" title="Describe a person and generate them with AI (your own Gemini key)">✨ AI person</button></div>
         <input type="file" id="personFile" hidden accept="image/*">
       </div>
       <div class="duo">
@@ -428,6 +431,7 @@ footer a:hover{color:var(--accent)}
       </div>
       <div class="statcol">
         <div id="topbtns">
+          <div class="seg mini" id="uiSeg" title="Simple shows the essentials; Pro shows every control"><button data-u="simple">Simple</button><button data-u="pro" class="on">Pro</button></div>
           <button class="btn" id="learnBtn" title="Take a guided tour or learn the basics">◉ Learn</button>
           <button class="btn icon" id="unitBtn" title="Switch units (meters / feet & inches)" aria-label="Switch measurement units">ft</button>
           <button class="btn icon" id="themeBtn" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">☀</button>
@@ -436,11 +440,11 @@ footer a:hover{color:var(--accent)}
         <div class="stats" id="stats"></div>
       </div>
     </div>
-    <div class="card" id="topview">
+    <div class="card proOnly" id="topview">
       <h2>Top view — focus plane &amp; depth of field</h2>
       <div id="tvWrap"></div>
     </div>
-    <details class="about">
+    <details class="about proOnly">
       <summary>About the math</summary>
       <div class="body">
         Thin-lens model. Circle of confusion <code>c = active-area diagonal ÷ 1500</code>.
@@ -462,10 +466,10 @@ footer a:hover{color:var(--accent)}
       <div class="ctl">
         <select id="lscheme" aria-label="Lighting setup"></select>
       </div>
-      <div id="ovh" title="Drag the lights around the subject"></div>
-      <div class="hint" style="font-size:11px;margin:4px 0 2px">Drag a light to move it. Closer lights are brighter.</div>
-      <div id="lightList"></div>
-      <div class="chips" style="margin-top:6px"><button id="addLight">＋ Add light</button></div>
+      <div id="ovh" class="proOnly" title="Drag the lights around the subject"></div>
+      <div class="hint proOnly" style="font-size:11px;margin:4px 0 2px">Drag a light to move it. Closer lights are brighter.</div>
+      <div id="lightList" class="proOnly"></div>
+      <div class="chips proOnly" style="margin-top:6px"><button id="addLight">＋ Add light</button></div>
     </div>
 
     <div class="card" id="shotsCard">
@@ -474,7 +478,7 @@ footer a:hover{color:var(--accent)}
       <div class="hint" id="shotsHint">Nothing saved yet — dial in a look and save it. Saved to this browser.</div>
     </div>
 
-    <div class="card">
+    <div class="card proOnly">
       <h2>Display</h2>
       <label class="tgl"><span>Bokeh lights</span><input type="checkbox" id="tglLights" checked><span class="sw"></span></label>
       <label class="tgl"><span>Thirds grid</span><input type="checkbox" id="tglGrid"><span class="sw"></span></label>
@@ -1651,15 +1655,15 @@ function drawStats(res){
     {l:'Depth of field', n:`<em>${fmtLen(dof)}</em>`, s:`${fmtLen(front)} in front · ${fmtLen(behind)} behind`},
     {l:'In focus', n:`${fmtLen(Dn)} <span style="color:var(--muted)">→</span> ${fmtLen(Df)}`, s:`focused at ${fmtLen(state.s)}`},
     {l:'Background blur', n:`<em>${pct<0.05?'0':pct.toFixed(pct<2?2:1)}%</em> of frame`, s:`<span class="dot" style="background:${bc}"></span>${bl} · bokeh disc ${res.bgDisc.toFixed(2)} mm on sensor`},
-    {l:'Hyperfocal', n:fmtLen(Hm), s:`focus there → sharp from ${fmtLen(Hm/2)} to ∞`},
-    {l:'Field of view', n:`${deg(res.fov.h)} × ${deg(res.fov.v)}`, s:`frame at subject ${res.frW.toFixed(2)} × ${res.frH.toFixed(2)} m`},
+    {pro:1,l:'Hyperfocal', n:fmtLen(Hm), s:`focus there → sharp from ${fmtLen(Hm/2)} to ∞`},
+    {pro:1,l:'Field of view', n:`${deg(res.fov.h)} × ${deg(res.fov.v)}`, s:`frame at subject ${res.frW.toFixed(2)} × ${res.frH.toFixed(2)} m`},
     {l:'Framing', n:framingLabel(frHp,subjH), s:`subject fills ${Math.round(subjH/frHp*100)}% of frame height · focused at ${fmtLen(state.s)}`},
   ];
   if(state.rig.some(L=>L.on&&Math.abs(L.phi)<18&&L.d<1))
     cards.push({l:'Flash reach', n:`${Math.round(Math.pow(state.s/state.b,2)*100)}%`, s:`background gets (s/b)² of subject exposure — inverse square`});
   if(Math.abs(res.crop-1)>0.03)
     cards.push({l:'Full-frame equivalent', n:`≈ ${Math.round(res.f*res.crop)} mm ${ap}${fmtN(res.N*res.crop)}`, s:`crop factor ${res.crop.toFixed(2)}× (active area)`});
-  $('#stats').innerHTML=cards.map(c=>`<div class="stat"><div class="lbl">${c.l}</div><div class="num">${c.n}</div><div class="sub">${c.s}</div></div>`).join('');
+  $('#stats').innerHTML=cards.map(c=>`<div class="stat${c.pro?' pro':''}"><div class="lbl">${c.l}</div><div class="num">${c.n}</div><div class="sub">${c.s}</div></div>`).join('');
 }
 
 // ---------- saved shots / storyboard ----------
@@ -2151,7 +2155,7 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change',e=>{
     $('#tourNext').textContent=i>=steps.length-1?'Done':'Next ›';
     setTimeout(position,40);   // let any state change settle, works even when tab is backgrounded
   }
-  function startTrack(key){ steps=TOURS[key]||TOURS.tour; cur=0; active=true; showStep(0); }
+  function startTrack(key){ setUI('pro'); steps=TOURS[key]||TOURS.tour; cur=0; active=true; showStep(0); } // lessons need the full UI visible
   function endTour(){ active=false; L.hidden=true; }
   function openMenu(){
     L.hidden=false; spot.classList.add('hide'); active=true; steps=[];
@@ -2177,6 +2181,19 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change',e=>{
     else if(e.key==='ArrowLeft'&&steps.length&&cur>0) showStep(cur-1);
   });
 })();
+
+// ---------- simple / pro modes ----------
+function setUI(u){
+  state.ui=u;
+  document.body.classList.toggle('ui-simple',u==='simple');
+  document.querySelectorAll('#uiSeg button').forEach(b=>b.classList.toggle('on',b.dataset.u===u));
+  try{localStorage.setItem('focallab.ui',u)}catch(e){}
+}
+$('#uiSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b||b.dataset.u===state.ui) return;
+  setUI(b.dataset.u); render();
+});
+setUI((()=>{try{return localStorage.getItem('focallab.ui')||'simple'}catch(e){return 'simple'}})());
 
 // ---------- collapsible panes ----------
 (function(){
