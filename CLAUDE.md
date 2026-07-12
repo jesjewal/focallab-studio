@@ -85,7 +85,7 @@ Recipe pattern: load black PNG → crop alpha bbox → (split at row-gap for mar
 1. Jesse to test AI generation with his real Gemini key (only unverified path).
 2. Connect GitHub→Netlify auto-deploy; buy focallab.studio domain.
 3. Design C-pass: accent discipline, type scale, person-row density.
-4. **Auto scene-set** (designed, not built): staged solver — intent dropdown (shot type) → solve lens+distance for target fill% → place people on thirds/staggered depth inside FoV → solve aperture/focus for DoF intent (cover spread vs isolate hero) → place key/fill/rim by convention. Deterministic pipeline, no search; respect locks; one-undo proposal. Add a "vary" shuffle.
+4. ~~Auto scene-set~~ **BUILT (2026-07-11).** `autoScene(type,vary)` + `SHOTS` recipe table + `#autoCard` (right rail, visible in Simple+Pro). Staged solver: shot type → lens → solve `s` from frame-height eqn (`s_mm=f*(1+frH_mm/effH)`, fill = standing-height÷frame-height so portrait≈2.4) → `placePeople` (thirds for 1, spread+depth-stagger for N) → aperture/focus per `dof` intent (`isolate`=wide+focus hero / `cover`=`coverAperture` floored at shot.N / `deep`) → bg → `applyScheme`. Hero = AF-locked person. `snapshotState`/`autoUndo` one-level undo; Vary jitters lens/side/light. In quick tour. **Future:** explicit lens/people lock toggles; more shot types (OTS, low/high angle).
 5. Portfolio link from jesseleewallace.com; footer contact decision (portfolio link vs email).
 6. Ideas parking lot: named camera/lens picker, foreground blur plane, aperture-blade bokeh, motion-blur note for sports subjects, bokeh extraction from uploaded backdrops.
 

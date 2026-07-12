@@ -106,6 +106,8 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .chips button{background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);font-size:12px;border-radius:999px;padding:6px 11px;cursor:pointer;transition:.15s}
 .chips button:hover{border-color:var(--accent);color:var(--accent)}
 .chips button.on{border-color:var(--text);color:var(--text)}
+.chips button.autobtn{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
+.chips button.autobtn:hover{opacity:.88}
 .tgl{display:flex;align-items:center;justify-content:space-between;padding:7px 0;font-size:13px}
 .tgl input{display:none}
 .tgl .sw{width:34px;height:20px;border-radius:999px;background:var(--track);position:relative;transition:.15s;cursor:pointer;flex:none}
@@ -443,6 +445,25 @@ footer a:hover{color:var(--accent)}
   </section>
 
   <aside id="railR">
+    <div class="card" id="autoCard">
+      <h2>Auto-set the shot</h2>
+      <div class="ctl">
+        <select id="autoShot" aria-label="Shot type">
+          <option value="auto">Auto (from my people)</option>
+          <option value="closeup">Close-up</option>
+          <option value="portrait">Portrait</option>
+          <option value="two">Two-shot</option>
+          <option value="group">Group</option>
+          <option value="wide">Wide establishing</option>
+        </select>
+      </div>
+      <div class="chips" style="margin-top:2px">
+        <button id="autoGo" class="autobtn">✦ Auto-set</button>
+        <button id="autoVary" title="Try another arrangement of the same shot">↻ Vary</button>
+        <button id="autoUndo" title="Undo the last auto-set" style="display:none">↺ Undo</button>
+      </div>
+      <div class="hint" style="font-size:11px;margin-top:6px">Solves lens, framing, where people stand, focus, and lighting for the shot you pick.</div>
+    </div>
     <div class="card">
       <h2>Presets</h2>
       <select id="presets" aria-label="Load a preset"></select>
@@ -1978,6 +1999,105 @@ $('#presets').addEventListener('change',e=>{
   render();
 });
 
+// ---------- auto scene-set: staged solver ----------
+// Each shot recipe: lens convention per mode, target subject fill (fraction of frame height),
+// DoF intent, base aperture, lighting, lateral spread (fraction of frame width), depth stagger (m),
+// and background multiplier. The solver runs these as a pipeline — no search.
+// fill = subject standing height ÷ frame height (>1 means the standing figure is taller than the
+// frame, i.e. tightly cropped — a headshot ≈ 3.6, chest-up portrait ≈ 2.4, full body ≈ 0.7).
+const SHOTS={
+  closeup: {lens:{photo:105,cine:85}, fill:2.9, dof:'isolate', N:2.0, light:'keyfill', spread:0.20, depth:0,   bgMul:8,  label:'close-up'},
+  portrait:{lens:{photo:85, cine:65}, fill:2.4, dof:'isolate', N:2.0, light:'3point',  spread:0.30, depth:0.15,bgMul:9,  label:'portrait'},
+  two:     {lens:{photo:50, cine:45}, fill:1.5, dof:'cover',   N:2.8, light:'keyfill', spread:0.55, depth:0.6, bgMul:7,  label:'two-shot'},
+  group:   {lens:{photo:35, cine:35}, fill:0.9, dof:'cover',   N:5.6, light:'none',    spread:0.64, depth:0.5, bgMul:6,  label:'group'},
+  wide:    {lens:{photo:24, cine:28}, fill:0.4, dof:'deep',    N:11,  light:'none',    spread:0.5,  depth:0,   bgMul:20, label:'wide establishing'},
+};
+function snapStop(N){ return F_STOPS.reduce((a,b)=>Math.abs(b-N)<Math.abs(a-N)?b:a); }
+// smallest (widest) aperture whose DoF still spans near..far when focused at mid — max blur, everyone sharp
+function coverAperture(f,c,mid_mm,near_mm,far_mm){
+  for(const N of F_STOPS){
+    const {Dn,Df}=dofLimits(f,N,c,mid_mm);
+    if(Dn<=near_mm*0.99 && (!isFinite(Df)||Df>=far_mm*1.01)) return N;
+  }
+  return F_STOPS[F_STOPS.length-1];
+}
+function placePeople(frW, shot, n, vary){
+  const jx = vary ? (Math.random()-0.5)*frW*0.06 : 0;
+  if(n===1){
+    const side = vary ? (Math.random()<0.5?-1:1) : -1;   // rule of thirds
+    return [{x: side*frW*0.15 + jx, d:0}];
+  }
+  const span=shot.spread*frW, out=[];
+  for(let i=0;i<n;i++){
+    const t=i/(n-1);                                       // 0..1 across the span
+    const x=(t-0.5)*span + jx;
+    const d=shot.depth ? (i%2===0 ? -shot.depth/2 : shot.depth/2) : 0;  // alternate near/far for depth
+    out.push({x,d});
+  }
+  return out;
+}
+let autoUndo=null;
+function snapshotState(){ return JSON.parse(JSON.stringify({mode:state.mode,cam:state.cam,o:state.o,ar:state.ar,f:state.f,N:state.N,s:state.s,b:state.b,afP:state.afP,people:state.people,scene:state.scene,ls:state.ls,rig:state.rig})); }
+function autoScene(type, vary){
+  if(!vary) autoUndo=snapshotState();          // stash for one-level undo (Vary keeps the same undo point)
+  else if(!autoUndo) autoUndo=snapshotState();
+  let key=type;
+  if(key==='auto'){ const n=state.people.length; key = n>=3?'group' : n===2?'two' : 'portrait'; }
+  const shot=SHOTS[key];
+  const n=state.people.length;
+  // hero = the AF-locked person if any, else the first
+  const hero=(state.afP>=0 && state.people[state.afP]) ? state.afP : 0;
+  // --- stage 1: lens ---
+  const jitterF = vary ? [0.8,0.9,1,1.15,1.25][Math.floor(Math.random()*5)] : 1;
+  let f=Math.round((shot.lens[state.mode]||shot.lens.photo)*jitterF);
+  f=Math.min(800,Math.max(8,f)); state.f=f;
+  // --- stage 2: distance for framing (solve s from the frame-height equation) ---
+  const {w:effW,h:effH}=activeArea();
+  const heights=state.people.map(p=>p.h||DEFH[p.t]||1.7);
+  const tall=Math.max(...heights);
+  const frH_mm=(tall/shot.fill)*1000;
+  let s=f*(1+frH_mm/effH)/1000;
+  s=Math.min(120,Math.max(Math.max(0.4,1.5*f/1000), s)); state.s=s;
+  // --- stage 3: place people within the resulting frame ---
+  const frW=frameAt(effW,effH,f,s*1000).w/1000;
+  const pos=placePeople(frW,shot,n,vary);
+  state.people.forEach((p,i)=>{ p.x=Math.max(-6,Math.min(6,pos[i].x)); p.d=Math.max(0.4, s+(pos[i].d||0)); });
+  // --- stage 4: aperture + focus for the DoF intent ---
+  const c=cocWH(effW,effH);
+  const depths=state.people.map(p=>p.d), near=Math.min(...depths), far=Math.max(...depths);
+  if(shot.dof==='isolate'){
+    state.N=snapStop(shot.N*(vary?[0.9,1,1.15][Math.floor(Math.random()*3)]:1));
+    state.s=state.people[hero].d; state.afP=hero;
+  } else if(shot.dof==='deep'){
+    state.N=shot.N; state.s=Math.max(state.s,(near+far)/2); state.afP=-1;
+  } else { // cover — everyone sharp, but no wider than the shot's base aperture (avoids silly f/1)
+    const mid=(near+far)/2; state.s=mid;
+    state.N=snapStop(Math.max(coverAperture(f,c,mid*1000,near*1000,far*1000), shot.N)); state.afP=-1;
+  }
+  // --- stage 5: background distance ---
+  state.b=Math.max(state.s+0.5, state.s*shot.bgMul);
+  // --- stage 6: lighting relative to the hero ---
+  applyScheme(shot.light);
+  if(vary && state.rig.length){
+    const flip=Math.random()<0.5?-1:1;
+    state.rig.forEach(L=>{ L.phi=L.phi*flip; if(Math.random()<0.4) L.t=['w','n','c'][Math.floor(Math.random()*3)]; });
+    if(flip<0) markCustom();
+  }
+  const ls=$('#lscheme'); if(ls) ls.value=state.ls;
+  selP=hero; clampState();
+  $('#autoUndo').style.display='';
+  renderPeople(); renderLights(); render();
+  toast(`${f}mm ${state.mode==='cine'?'T':'ƒ/'}${fmtN(state.N)} · ${shot.label}`);
+}
+$('#autoGo').addEventListener('click',()=>autoScene($('#autoShot').value,false));
+$('#autoVary').addEventListener('click',()=>autoScene($('#autoShot').value,true));
+$('#autoUndo').addEventListener('click',()=>{
+  if(!autoUndo) return;
+  Object.assign(state,JSON.parse(JSON.stringify(autoUndo)));
+  autoUndo=null; $('#autoUndo').style.display='none';
+  renderPeople(); renderLights(); render(); toast('Reverted');
+});
+
 // select options
 $('#scene').innerHTML=SCENES.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
 $('#ar').innerHTML=ASPECTS.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
@@ -2098,6 +2218,7 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change',e=>{
       {sel:'#cam',spot:'card',title:'Pick your camera',body:'Choose a <b>sensor</b> — full-frame, APS-C, a phone, or cine formats. Bigger sensors blur backgrounds more for the same shot, and they collect more light, so they look cleaner in dim scenes. Orientation/aspect lives here too.'},
       {sel:'#focal',spot:'card',title:'Set the lens',body:'<b>Focal length</b> sets how wide or tight you are; <b>aperture</b> (ƒ/) sets how much blur. Wide aperture (small number) = shallow focus.'},
       {sel:'#scene',spot:'card',title:'Build the scene',body:'Pick a <b>location</b>, then add <b>people</b> one at a time — each with their own type, skin tone, height, position, and distance from camera. Or upload your own backdrop.'},
+      {sel:'#autoCard',spot:'card',title:'Or let it set the shot for you',body:'Not sure where to start? Pick a <b>shot type</b> — portrait, two-shot, group, wide — and press <b>Auto-set</b>. It chooses the lens, moves the camera to the right distance, arranges your people, sets the focus and aperture, and adds lighting that fits the shot. Press <b>Vary</b> for a different take on the same idea, or <b>Undo</b> to go back.'},
       {sel:'#lscheme',spot:'card',title:'Light it',body:'Choose a lighting setup, or <b>drag the key / fill / rim lights</b> around the overhead stage. The subject re-lights live, with real falloff and shadows.'},
       {sel:'.frame',title:'Your viewfinder',body:'This is the live shot. Everything you change shows here instantly — framing, depth of field, bokeh, and lighting. <b>Click a person to focus on them</b> — the AF lock jumps to whoever you click. Resize the frame with the S / M / L control.'},
       {sel:'#stats',title:'The numbers',body:'Real optics behind the picture: depth of field, what’s in focus, hyperfocal distance, field of view, and how much the background is blurred.'},
