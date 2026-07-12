@@ -1,5 +1,5 @@
-const CACHE = 'focallab-v21';
-const ASSETS = ['./', './manifest.webmanifest', './fcl-icon.png', './fcl-logo.png'];
+const CACHE = 'focallab-v22';
+const ASSETS = ['./', './manifest.webmanifest', './fcl-icon.png', './fcl-mark.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));

@@ -35,7 +35,7 @@ try{
   --text:#f2f2f2; --muted:#9c9c9c; --faint:#6d6d6d;
   --accent:#f0a93c; --accent-soft:rgba(240,169,60,.14);
   --teal:#62d2c3; --good:#5dd97c; --violet:#b08cff; --hot:#ff8c5a;
-  --track:#2c2c2c; --seg-on:#2a2a2a; --tv-tick:#3d3d3d; --tv-cam:#c2c2c2; --grid:rgba(255,255,255,.035);
+  --track:#2c2c2c; --seg-on:#2a2a2a; --tv-tick:#3d3d3d; --tv-cam:#c2c2c2;
   --accent-rgb:240,169,60; --good-rgb:93,217,124;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
@@ -46,21 +46,20 @@ html.light{
   --text:#141414; --muted:#6a6a6a; --faint:#949494;
   --accent:#c07300; --accent-soft:rgba(192,115,0,.12);
   --teal:#0f8d7f; --good:#1f9e4b; --violet:#6d4fd2; --hot:#e06530;
-  --track:#dedede; --seg-on:#e9e9e9; --tv-tick:#bdbdbd; --tv-cam:#7d7d7d; --grid:rgba(0,0,0,.04);
+  --track:#dedede; --seg-on:#e9e9e9; --tv-tick:#bdbdbd; --tv-cam:#7d7d7d;
   --accent-rgb:207,125,10; --good-rgb:31,158,75;
   color-scheme:light;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45;
-  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
-  background-size:30px 30px}
-header{display:flex;align-items:center;gap:14px;max-width:1480px;margin:0 auto;padding:20px 22px 6px}
-.logo{display:flex;align-items:center;gap:11px}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45}
+#appBar{display:flex;align-items:center;justify-content:space-between;gap:14px;max-width:1560px;margin:0 auto;padding:14px 18px 12px;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:12px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);margin:0}
-.logoImg{display:block;height:172px;width:auto;margin:0 auto;filter:invert(1)}
-html.light .logoImg{filter:none}
-header .spacer{flex:1}
+.markImg{display:block;height:40px;width:auto;filter:invert(1)}
+html.light .markImg{filter:none}
+.wordmark{font-size:15.5px;font-weight:650;letter-spacing:.34em;color:var(--text);white-space:nowrap;line-height:1.25}
+.wordmark span{display:block;font-size:9px;font-weight:600;letter-spacing:.58em;color:var(--muted)}
 .btn{background:var(--panel);border:1px solid var(--line-2);color:var(--text);border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer;transition:.15s border-color,.15s background}
 .btn:hover{border-color:var(--accent);background:var(--accent-soft)}
 .btn.small{padding:5px 11px;font-size:12px;border-radius:8px}
@@ -77,15 +76,6 @@ aside .card{margin-bottom:10px}
 .duo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .duo .ctl{margin-bottom:0}
 .vfbar{display:flex;justify-content:flex-end;align-items:center;gap:9px;margin-bottom:7px}
-#brand{display:flex;justify-content:center;margin-bottom:14px}
-/* lab bench rule — ink bar with measurement ticks, separates the brand from the bench */
-#labRule{margin:0 2px 16px}
-#labRule .rb{height:2.5px;background:var(--text);-webkit-mask:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
-#labRule .rt{margin-top:3px;height:8px;opacity:.45;
-  background:repeating-linear-gradient(90deg,var(--text) 0 1.5px,transparent 1.5px 72px),
-             repeating-linear-gradient(90deg,var(--text) 0 1px,transparent 1px 12px);
-  background-size:100% 100%,100% 50%;background-repeat:no-repeat;
-  -webkit-mask:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
 .statcol{flex:1 1 248px;min-width:240px;display:flex;flex-direction:column;gap:8px}
 #topbtns{display:flex;flex-wrap:wrap;gap:8px}
 #vfSeg{position:absolute;top:14px;right:14px;z-index:5;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);border-color:rgba(255,255,255,.14)}
@@ -197,11 +187,6 @@ details.about{border:1px solid var(--line);border-radius:14px;background:var(--p
 details.about summary{cursor:pointer;padding:13px 0;font-size:13px;color:var(--muted)}
 details.about .body{padding:2px 0 14px;color:var(--muted);font-size:13px}
 details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
-/* film strip divider above the footer */
-#filmStrip{max-width:1560px;margin:26px auto 16px;padding:0 20px}
-#filmStrip .fs{height:22px;border-top:2px solid var(--text);border-bottom:2px solid var(--text);padding:5px 0;opacity:.45;
-  -webkit-mask:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
-#filmStrip .fs i{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--text) 0 15px,transparent 15px 33px)}
 footer{max-width:1480px;margin:0 auto;padding:0 22px 34px;color:var(--faint);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;text-align:center}
 footer a{color:var(--muted);text-decoration:none}
 footer a:hover{color:var(--accent)}
@@ -247,7 +232,7 @@ footer a:hover{color:var(--accent)}
   .ctl{margin-bottom:8px}
   .duo{margin-bottom:8px}
   .seg button{padding:5px 0}
-  header{padding:12px 14px 2px}
+  #appBar{padding:10px 14px 8px}
 }
 @media (max-width:1150px){
   main{grid-template-columns:232px minmax(0,1fr) 232px;gap:9px}
@@ -262,7 +247,7 @@ footer a:hover{color:var(--accent)}
   body.vf-s canvas#vf, body.vf-m canvas#vf, body.vf-l canvas#vf{max-width:96cqw;max-height:70vh}
 }
 @media (max-width:640px){
-  header{flex-wrap:wrap;gap:10px;padding:14px 14px 4px}
+  #appBar{flex-wrap:wrap;justify-content:center;gap:10px;padding:12px 14px 10px}
   main{padding:10px 14px 30px}
 }
 #printSheet{display:none}
@@ -335,6 +320,21 @@ footer a:hover{color:var(--accent)}
     </div>
   </div>
 </div>
+
+<header id="appBar">
+  <div class="logo">
+    <h1 class="sr">FocalLab Studio — see your shot before you make it</h1>
+    <img class="markImg" src="fcl-mark.png" alt="" width="94" height="160">
+    <div class="wordmark">FOCAL LAB<span>STUDIO</span></div>
+  </div>
+  <div id="topbtns">
+    <div class="seg mini" id="uiSeg" title="Simple shows the essentials; Pro shows every control"><button data-u="simple">Simple</button><button data-u="pro" class="on">Pro</button></div>
+    <button class="btn" id="learnBtn" title="Take a guided tour or learn the basics">◉ Learn</button>
+    <button class="btn icon" id="unitBtn" title="Switch units (meters / feet & inches)" aria-label="Switch measurement units">ft</button>
+    <button class="btn icon" id="themeBtn" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">☀</button>
+    <button class="btn" id="copyLink" title="Copy a shareable link with the current settings">Copy settings link</button>
+  </div>
+</header>
 
 <main>
   <aside id="railL">
@@ -410,16 +410,6 @@ footer a:hover{color:var(--accent)}
   </aside>
 
   <section id="stage">
-    <div id="brand">
-      <div class="logo">
-        <h1 class="sr">FocalLab Studio — see your shot before you make it</h1>
-        <img class="logoImg" src="fcl-logo.png" alt="FocalLab Studio — flask and aperture logo" width="599" height="520">
-      </div>
-    </div>
-    <div id="labRule" aria-hidden="true">
-      <div class="rb"></div>
-      <div class="rt"></div>
-    </div>
     <div class="flow">
       <div class="frame">
         <div class="seg mini" id="vfSeg" title="Viewfinder size">
@@ -430,13 +420,6 @@ footer a:hover{color:var(--accent)}
         <canvas id="vf" width="1320" height="880"></canvas>
       </div>
       <div class="statcol">
-        <div id="topbtns">
-          <div class="seg mini" id="uiSeg" title="Simple shows the essentials; Pro shows every control"><button data-u="simple">Simple</button><button data-u="pro" class="on">Pro</button></div>
-          <button class="btn" id="learnBtn" title="Take a guided tour or learn the basics">◉ Learn</button>
-          <button class="btn icon" id="unitBtn" title="Switch units (meters / feet & inches)" aria-label="Switch measurement units">ft</button>
-          <button class="btn icon" id="themeBtn" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">☀</button>
-          <button class="btn" id="copyLink" title="Copy a shareable link with the current settings">Copy settings link</button>
-        </div>
         <div class="stats" id="stats"></div>
       </div>
     </div>
@@ -489,7 +472,6 @@ footer a:hover{color:var(--accent)}
 
 <div id="printSheet" aria-hidden="true"></div>
 
-<div id="filmStrip" aria-hidden="true"><div class="fs"><i></i></div></div>
 <footer>© 2026 <a href="https://jesseleewallace.com" target="_blank" rel="noopener">Jesse Wallace</a> · Not affiliated with dofsimulator.net</footer>
 <div id="toast">Link copied</div>
 
