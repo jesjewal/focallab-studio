@@ -273,6 +273,8 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
   /* phones: stacked layout — the frame just fills the width at every size */
   body.vf-s canvas#vf, body.vf-m canvas#vf, body.vf-l canvas#vf{max-width:96cqw;max-height:70vh}
   #readouts{grid-template-columns:repeat(2,1fr)}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat .num{white-space:normal}
 }
 @media (max-width:640px){
   #appBar{flex-wrap:wrap;justify-content:center;gap:10px;padding:12px 14px 10px}
@@ -2394,9 +2396,34 @@ document.querySelectorAll('#sideNav .sn').forEach(b=>{
     card.classList.remove('min');
     card.scrollIntoView({behavior:'smooth',block:'center'});
     document.querySelectorAll('#sideNav .sn').forEach(x=>x.classList.toggle('cur',x===b));
+    spyHold=Date.now()+1200;                               // let the smooth scroll land without the spy fighting it
     card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),1100);
   });
 });
+// scroll-spy: the sidebar highlights the section nearest the top of the view
+let spyHold=0;
+(function(){
+  const map=[...document.querySelectorAll('#sideNav .sn')]
+    .map(b=>{const t=document.querySelector(b.dataset.nav); return {b,el:t?(t.closest('.card')||t):null};})
+    .filter(x=>x.el);
+  let t=0;
+  addEventListener('scroll',()=>{ if(t) return; t=setTimeout(()=>{t=0;
+    if(Date.now()<spyHold) return;
+    const atBottom=window.scrollY+window.innerHeight>=document.documentElement.scrollHeight-4;
+    let best=null,bd=1e9;
+    for(const m of map){
+      if(m.el.offsetParent===null) continue;               // hidden in Simple mode
+      const r=m.el.getBoundingClientRect();
+      if(atBottom){                                        // bottom of page: highlight the lowest visible section
+        if(r.top<window.innerHeight-40){ if(!best||r.top>bd){bd=r.top;best=m;} }
+      } else {
+        const d=Math.abs(r.top-120);
+        if(r.bottom>70 && d<bd){bd=d;best=m;}
+      }
+    }
+    if(best) document.querySelectorAll('#sideNav .sn').forEach(x=>x.classList.toggle('cur',x===best.b));
+  },140); },{passive:true});
+})();
 
 // ---------- collapsible panes ----------
 (function(){
