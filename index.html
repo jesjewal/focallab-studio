@@ -35,7 +35,7 @@ try{
   --text:#f2f2f2; --muted:#9c9c9c; --faint:#6d6d6d;
   --accent:#f0a93c; --accent-soft:rgba(240,169,60,.14);
   --teal:#62d2c3; --good:#5dd97c; --violet:#b08cff; --hot:#ff8c5a;
-  --track:#2c2c2c; --fill:#cfcfcf; --seg-on:#2a2a2a; --tv-tick:#3d3d3d; --tv-cam:#c2c2c2;
+  --track:#2c2c2c; --fill:#cfcfcf; --seg-on:#2a2a2a; --surf-hi:#161616; --surf-lo:#0d0d0d; --edge-hi:rgba(255,255,255,.055); --shadow:0 10px 28px rgba(0,0,0,.42); --tv-tick:#3d3d3d; --tv-cam:#c2c2c2;
   --accent-rgb:240,169,60; --good-rgb:93,217,124;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
@@ -46,7 +46,7 @@ html.light{
   --text:#141414; --muted:#6a6a6a; --faint:#949494;
   --accent:#c07300; --accent-soft:rgba(192,115,0,.12);
   --teal:#0f8d7f; --good:#1f9e4b; --violet:#6d4fd2; --hot:#e06530;
-  --track:#dedede; --fill:#4a4a4a; --seg-on:#e9e9e9; --tv-tick:#bdbdbd; --tv-cam:#7d7d7d;
+  --track:#dedede; --fill:#4a4a4a; --seg-on:#e9e9e9; --surf-hi:#ffffff; --surf-lo:#f5f5f5; --edge-hi:rgba(255,255,255,.9); --shadow:0 8px 22px rgba(0,0,0,.07); --tv-tick:#bdbdbd; --tv-cam:#7d7d7d;
   --accent-rgb:207,125,10; --good-rgb:31,158,75;
   color-scheme:light;
 }
@@ -74,7 +74,7 @@ html.light .markImg{filter:none}
 #content{flex:1;padding:14px 18px 22px}
 #heroRow{display:grid;grid-template-columns:minmax(0,1fr) 212px;gap:12px;align-items:stretch}
 #readouts{display:grid;grid-template-rows:repeat(4,1fr);gap:12px;min-width:0}
-.ro{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;display:flex;flex-direction:column;justify-content:center;gap:5px;min-height:74px}
+.ro{background:linear-gradient(180deg,var(--surf-hi),var(--surf-lo));border:1px solid var(--line);border-radius:14px;padding:12px 16px;display:flex;flex-direction:column;justify-content:center;gap:5px;min-height:74px;box-shadow:inset 0 1px 0 var(--edge-hi),var(--shadow)}
 .ro .lbl{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
 .ro .num{font-family:var(--mono);font-size:25px;color:var(--accent);white-space:nowrap}
 #modules{columns:3 300px;column-gap:12px;margin-top:12px}
@@ -86,12 +86,13 @@ html.light .markImg{filter:none}
 #statusBar .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--good);margin-right:8px;vertical-align:0}
 #statusBar .stC{text-align:center;flex:1}
 .card.flash{border-color:var(--muted);box-shadow:0 0 0 3px var(--accent-soft)}
-.btn{background:var(--panel);border:1px solid var(--line-2);color:var(--text);border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer;transition:.15s border-color,.15s background}
+.btn{background:linear-gradient(180deg,var(--surf-hi),var(--surf-lo));border:1px solid var(--line-2);color:var(--text);border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer;transition:.15s border-color,.15s background,.15s transform;box-shadow:inset 0 1px 0 var(--edge-hi)}
+.btn:active{transform:translateY(1px)}
 .btn:hover{border-color:var(--accent);background:var(--accent-soft)}
 .btn.small{padding:5px 11px;font-size:12px;border-radius:8px}
 .btn.icon{padding:8px 12px;font-size:15px;line-height:1}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px}
-.card h2{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:0 0 9px;font-weight:600}
+.card{background:linear-gradient(180deg,var(--surf-hi),var(--surf-lo));border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:inset 0 1px 0 var(--edge-hi),var(--shadow)}
+.card h2{font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:0 0 9px;font-weight:600}
 /* bubble marker before each pane title — echoes the bubbles rising from the flask */
 .card h2.clps::before{content:'';width:5px;height:5px;border-radius:50%;border:1px solid var(--muted);margin-right:8px;flex:none}
 .card.min h2.clps::before{background:var(--accent);border-color:var(--accent)}
@@ -112,15 +113,15 @@ html.light .markImg{filter:none}
 .ctl .val{white-space:nowrap}
 .ctl label{font-size:13px;color:var(--text)}
 .ctl .val{font-family:var(--mono);font-size:13px;color:var(--accent)}
-select{width:100%;background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);border-radius:10px;padding:9px 10px;font-size:13.5px;appearance:none;background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%238294a8" fill="none" stroke-width="1.5"/></svg>');background-repeat:no-repeat;background-position:right 12px center}
+select{width:100%;background:linear-gradient(180deg,var(--surf-hi),var(--surf-lo));box-shadow:inset 0 1px 0 var(--edge-hi);border:1px solid var(--line-2);color:var(--text);border-radius:10px;padding:10px 30px 10px 11px;font-size:13.5px;cursor:pointer;appearance:none;background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%238294a8" fill="none" stroke-width="1.5"/></svg>');background-repeat:no-repeat;background-position:right 12px center}
 select.mini{width:auto;padding:4px 24px 4px 8px;font-size:11.5px;border-radius:7px}
 select:disabled{opacity:.45}
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:0;--p:50%}
 input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--fill) var(--p),var(--track) var(--p))}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:#fff;border:2px solid var(--fill);margin-top:-6px;box-shadow:0 1px 5px rgba(0,0,0,.5);cursor:grab}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:linear-gradient(180deg,#fff,#e6e6e6);border:1px solid rgba(0,0,0,.35);margin-top:-7px;box-shadow:0 2px 6px rgba(0,0,0,.45),inset 0 1px 0 #fff;cursor:grab}
 input[type=range]::-moz-range-track{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--fill) var(--p),var(--track) var(--p))}
 input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--fill);cursor:grab}
-.seg{display:flex;background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;padding:3px;gap:3px}
+.seg{display:flex;background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;padding:3px;gap:3px;box-shadow:inset 0 2px 5px rgba(0,0,0,.22)}
 .seg button{flex:1;background:transparent;border:0;color:var(--muted);padding:7px 0;border-radius:8px;font-size:13px;cursor:pointer}
 .seg button.on{background:var(--seg-on);color:var(--text)}
 .seg.big button.on{background:var(--text);color:var(--bg);font-weight:600}
@@ -135,9 +136,9 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .tgl{display:flex;align-items:center;justify-content:space-between;padding:7px 0;font-size:13px}
 .tgl input{display:none}
 .tgl .sw{width:34px;height:20px;border-radius:999px;background:var(--track);position:relative;transition:.15s;cursor:pointer;flex:none}
-.tgl .sw::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#90a4b8;transition:.15s}
+.tgl .sw::after{content:"";position:absolute;top:2.5px;left:3px;width:15px;height:15px;border-radius:50%;background:linear-gradient(180deg,#fff,#d9d9d9);box-shadow:0 1px 3px rgba(0,0,0,.4);transition:.15s}
 .tgl input:checked + .sw{background:var(--text)}
-.tgl input:checked + .sw::after{left:17px;background:var(--bg)}
+.tgl input:checked + .sw::after{left:16px;background:linear-gradient(180deg,var(--bg),var(--bg))}
 .lrow{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:12px}
 .lrow .ldot{width:9px;height:9px;border-radius:50%;flex:none}
 .lrow .lname{width:34px;flex:none;color:var(--muted);white-space:nowrap;overflow:hidden}
@@ -195,11 +196,11 @@ body.vf-s canvas#vf{max-width:max(28vw,240px);max-width:min(50cqw,max(28vw,240px
 body.vf-m canvas#vf{max-width:max(42vw,300px);max-width:min(75cqw,max(42vw,300px));max-height:58vh}
 body.vf-l canvas#vf{max-width:max(54vw,340px);max-width:min(97cqw,max(54vw,340px));max-height:84vh}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:8px 11px}
-.stat .lbl{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+.stat{background:linear-gradient(180deg,var(--surf-hi),var(--surf-lo));border:1px solid var(--line);border-radius:11px;padding:9px 12px;box-shadow:inset 0 1px 0 var(--edge-hi)}
+.stat .lbl{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
 .stat .num{font-family:var(--mono);font-size:14.5px;margin-top:3px;color:var(--text);white-space:nowrap}
 .stat .num em{font-style:normal;color:var(--accent)}
-.stat .sub{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4}
+.stat .sub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
 #topview svg{display:block;width:100%;height:auto}
 .rowhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
@@ -212,7 +213,7 @@ body.vf-l canvas#vf{max-width:max(54vw,340px);max-width:min(97cqw,max(54vw,340px
 .shot .acts{display:flex;padding:0 4px 5px}
 .shot .acts button{background:none;border:0;color:var(--faint);font-size:11px;cursor:pointer;padding:2px 5px}
 .shot .acts button:hover{color:var(--text)}
-.hint{color:var(--faint);font-size:12.5px}
+.hint{color:var(--faint);font-size:12.5px;line-height:1.5}
 details.about{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:0 16px}
 details.about summary{cursor:pointer;padding:13px 0;font-size:13px;color:var(--muted)}
 details.about .body{padding:2px 0 14px;color:var(--muted);font-size:13px}
@@ -466,6 +467,13 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
         <div class="chips" style="margin-top:2px"><button id="addPerson">＋ Add person</button><button id="upPersonBtn" class="proOnly" title="Upload a photo of a person — the background is removed so they can stand in the scene">⬆ Upload person</button><button id="aiPersonBtn" class="proOnly" title="Describe a person and generate them with AI (your own Gemini key)">✨ AI person</button></div>
         <input type="file" id="personFile" hidden accept="image/*">
       </div>
+      <div class="ctl">
+        <div class="row"><label>Figure style</label></div>
+        <div class="seg" id="figSeg">
+          <button data-fs="classic" class="on">Classic</button>
+          <button data-fs="soft">Mannequin</button>
+        </div>
+      </div>
       <div class="duo">
         <div class="ctl">
           <div class="row"><label for="dist">Focus dist</label><span class="val" id="distV"></span></div>
@@ -619,6 +627,7 @@ const state={mode:'photo', cam:'ff', o:'l', ar:'2.39', f:85, N:1.8, s:2.5, b:18,
   ls:'none',
   rig:[]};
 let customBgImg=null;
+let figStyle='classic';   // 'classic' pastel vs 'soft' muted-mannequin — A/B for the art direction
 
 const $=s=>document.querySelector(s);
 const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -1444,6 +1453,13 @@ function applyFigLighting(pc,W,H,minX,maxX,refHH,pLat,pDepth,focusDepth){
   }
   pc.globalCompositeOperation='source-over';
 }
+function muteTone(hex){ // pull a colour toward its own luminance — matte, desaturated, filmic
+  if(!/^#/.test(hex)) return hex;
+  const c=parseInt(hex.slice(1),16), r=c>>16&255, g=c>>8&255, b=c&255;
+  const l=r*0.299+g*0.587+b*0.114, a=0.55, d=0.94;
+  const m=v=>Math.round((v+(l-v)*a)*d);
+  return `rgb(${m(r)},${m(g)},${m(b)})`;
+}
 function drawPeople(W,H,res,ppm,groundY){
   PHIT.length=0; // rebuilt every frame: screen-space hitboxes for click-to-focus
   const people=state.people.length?state.people:[{t:'woman',skin:'medium',x:0,h:DEFH.woman,d:state.s,c:clothFor('woman',0),hair:HAIRS[0]}];
@@ -1468,7 +1484,8 @@ function drawPeople(W,H,res,ppm,groundY){
     // figure onto the offscreen layer
     pc.clearRect(0,0,pcan.width,pcan.height); pc.lineCap='round';
     const X=x=>ox+x*hh, Y=y=>fy-y*hh;
-    const skinCol=skinC(p.skin), clothCol=p.c||clothFor(p.t,0), hairCol=p.hair||HAIRS[0];
+    const tone=figStyle==='soft'?muteTone:(c=>c);
+    const skinCol=tone(skinC(p.skin)), clothCol=tone(p.c||clothFor(p.t,0)), hairCol=tone(p.hair||HAIRS[0]);
     const set=c=>{pc.fillStyle=c;pc.strokeStyle=c;};
     const s={
       seg:(x1,y1,x2,y2,w)=>{pc.beginPath();pc.moveTo(X(x1),Y(y1));pc.lineTo(X(x2),Y(y2));pc.lineWidth=w*hh;pc.stroke();},
@@ -1496,6 +1513,13 @@ function drawPeople(W,H,res,ppm,groundY){
       exMin=ox-w/2; exMax=ox+w/2;
     } else {
       (TYPEFIG[p.t]||figWoman)(s);
+    }
+    if(figStyle==='soft'&&p.t!=='ai'){   // sculpt the figure: top sheen, grounded lower body
+      pc.save(); pc.globalCompositeOperation='source-atop';
+      const fg=pc.createLinearGradient(0,fy-hh*1.08,0,fy);
+      fg.addColorStop(0,'rgba(255,255,255,.12)'); fg.addColorStop(.42,'rgba(0,0,0,0)'); fg.addColorStop(1,'rgba(0,0,0,.30)');
+      pc.fillStyle=fg; pc.fillRect(exMin-3,fy-hh*1.1,(exMax-exMin)+6,hh*1.15);
+      pc.restore();
     }
     applyFigLighting(pc,W,H,exMin,exMax,hh,(p.x||0),d,state.s);
     PHIT.push({i:idx, x0:exMin, x1:exMax, y0:fy-hh*1.05, y1:fy+hh*0.03});
@@ -1976,6 +2000,12 @@ $('#peopleList').addEventListener('click',e=>{
 });
 $('#addPerson').addEventListener('click',()=>{ addPerson(); selP=state.people.length-1; renderPeople(); render(); });
 $('#scene').addEventListener('change',e=>{state.scene=e.target.value;render();});
+$('#figSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  figStyle=b.dataset.fs;
+  document.querySelectorAll('#figSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  render();
+});
 $('#ar').addEventListener('change',e=>{state.ar=e.target.value;render();});
 $('#orient').addEventListener('click',e=>{const b=e.target.closest('button');if(b){state.o=b.dataset.o;render();}});
 const fMem={photo:85, cine:35};   // each mode remembers its own focal length
