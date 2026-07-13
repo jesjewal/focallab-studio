@@ -2137,9 +2137,27 @@ function autoScene(type, vary){
   let key=type;
   if(key==='auto'){ const n=state.people.length; key = n>=3?'group' : n===2?'two' : 'portrait'; }
   const shot=SHOTS[key];
+  // --- stage 0: build the cast — the shot type defines how many people belong in it ---
+  let hero=(state.afP>=0 && state.people[state.afP]) ? state.afP : 0;
+  const heroP=state.people[hero];
+  const CAST={closeup:1, portrait:1, two:2, group:Math.max(3,Math.min(4,state.people.length)), wide:0}; // 0 = keep as-is
+  const want=CAST[key];
+  if(want){
+    while(state.people.length>want){                          // trim extras, never the hero (Undo restores them)
+      const last=state.people.length-1;
+      state.people.splice(state.people[last]===heroP?last-1:last,1);
+    }
+    while(state.people.length<want){                          // add people, alternating type for a natural mix
+      addPerson();
+      const added=state.people[state.people.length-1];
+      if(state.people.some(p=>p!==added&&p.t==='woman')&&!state.people.some(p=>p!==added&&p.t==='man')){
+        added.t='man'; added.h=DEFH.man; added.c=clothFor('man',Math.max(0,state.people.filter(p=>p.t==='man').length-1));
+      }
+    }
+    hero=Math.max(0,state.people.indexOf(heroP));
+    if(state.afP>=state.people.length) state.afP=-1;
+  }
   const n=state.people.length;
-  // hero = the AF-locked person if any, else the first
-  const hero=(state.afP>=0 && state.people[state.afP]) ? state.afP : 0;
   // --- stage 1: lens ---
   const jitterF = vary ? [0.8,0.9,1,1.15,1.25][Math.floor(Math.random()*5)] : 1;
   let f=Math.round((shot.lens[state.mode]||shot.lens.photo)*jitterF);
@@ -2311,7 +2329,7 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change',e=>{
       {sel:'#cam',spot:'card',title:'Pick your camera',body:'Choose a <b>sensor</b> — full-frame, APS-C, a phone, or cine formats. Bigger sensors blur backgrounds more for the same shot, and they collect more light, so they look cleaner in dim scenes. Orientation/aspect lives here too.'},
       {sel:'#focal',spot:'card',title:'Set the lens',body:'<b>Focal length</b> sets how wide or tight you are; <b>aperture</b> (ƒ/) sets how much blur. Wide aperture (small number) = shallow focus.'},
       {sel:'#scene',spot:'card',title:'Build the scene',body:'Pick a <b>location</b>, then add <b>people</b> one at a time — each with their own type, skin tone, height, position, and distance from camera. Or upload your own backdrop.'},
-      {sel:'#autoCard',spot:'card',title:'Or let it set the shot for you',body:'Not sure where to start? Pick a <b>shot type</b> — portrait, two-shot, group, wide — and press <b>Auto-set</b>. It chooses the lens, moves the camera to the right distance, arranges your people, sets the focus and aperture, and adds lighting that fits the shot. Press <b>Vary</b> for a different take on the same idea, or <b>Undo</b> to go back.'},
+      {sel:'#autoCard',spot:'card',title:'Or let it set the shot for you',body:'Not sure where to start? Pick a <b>shot type</b> — portrait, two-shot, group, wide — and press <b>Auto-set</b>. It builds the cast for the shot (a two-shot adds a second person), chooses the lens, moves the camera to the right distance, arranges everyone, sets the focus and aperture, and adds lighting that fits. Press <b>Vary</b> for a different take on the same idea, or <b>Undo</b> to go back.'},
       {sel:'#lscheme',spot:'card',title:'Light it',body:'Choose a lighting setup, or <b>drag the key / fill / rim lights</b> around the overhead stage. The subject re-lights live, with real falloff and shadows.'},
       {sel:'.frame',title:'Your viewfinder',body:'This is the live shot. Everything you change shows here instantly — framing, depth of field, bokeh, and lighting. <b>Click a person to focus on them</b> — the AF lock jumps to whoever you click. Resize the frame with the S / M / L control.'},
       {sel:'#stats',title:'The numbers',body:'Real optics behind the picture: depth of field, what’s in focus, hyperfocal distance, field of view, and how much the background is blurred.'},
