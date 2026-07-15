@@ -524,7 +524,7 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
     </div>
 
     <div class="card" id="shotsCard">
-      <div class="rowhead"><h2 id="shotsTitle">Saved looks</h2><div style="display:flex;gap:6px"><button class="btn small" id="pdfBtn" title="Print or save a PDF sheet of the current frame and saved shots">⤓ PDF</button><button class="btn small" id="saveShot">＋ Save</button></div></div>
+      <div class="rowhead"><h2 id="shotsTitle">Saved looks</h2><div style="display:flex;gap:6px"><button class="btn small" id="cardBtn" title="Download a shareable image of this shot — frame, settings, and branding">⤓ Card</button><button class="btn small" id="pdfBtn" title="Print or save a PDF sheet of the current frame and saved shots">⤓ PDF</button><button class="btn small" id="saveShot">＋ Save</button></div></div>
       <div class="shots" id="shotsStrip"></div>
       <div class="hint" id="shotsHint">Nothing saved yet — dial in a look and save it. Saved to this browser.</div>
     </div>
@@ -972,14 +972,33 @@ cv.addEventListener('click',e=>{
 });
 let off1=document.createElement('canvas'), off2=document.createElement('canvas'), pcan=document.createElement('canvas');
 const spriteCache={};
+function bokehShape(){ // the iris shapes out-of-focus highlights: round wide open, 9-blade polygon stopped down, anamorphic squeeze in scope
+  const ana=state.mode==='cine'&&state.ar==='2.39';
+  return (ana?'ana-':'')+(state.N<=2.2?'round':'blade');
+}
 function lightSprite(color){
-  if(spriteCache[color]) return spriteCache[color];
+  const shape=bokehShape(), key=color+'|'+shape;
+  if(spriteCache[key]) return spriteCache[key];
   const s=document.createElement('canvas'); s.width=s.height=64;
-  const g=s.getContext('2d'), gr=g.createRadialGradient(32,32,0,32,32,32);
+  const g=s.getContext('2d');
+  g.translate(32,32);
+  if(shape.startsWith('ana-')) g.scale(0.64,1);       // anamorphic ovals (tall)
+  if(shape.endsWith('blade')){                         // 7-blade iris — clearly polygonal highlights when stopped down
+    const K=7, rot=-Math.PI/2+0.14, R=31;
+    g.beginPath();
+    for(let i=0;i<K;i++){
+      const a1=rot+i*2*Math.PI/K, x=Math.cos(a1)*R, y=Math.sin(a1)*R;
+      i===0?g.moveTo(x,y):g.lineTo(x,y);
+    }
+    g.closePath(); g.clip();
+  } else {
+    g.beginPath(); g.arc(0,0,32,0,7); g.clip();
+  }
+  const gr=g.createRadialGradient(0,0,0,0,0,32);
   gr.addColorStop(0,color); gr.addColorStop(0.72,color);
   gr.addColorStop(0.9,color+'e6'); gr.addColorStop(1,color+'00');
-  g.fillStyle=gr; g.beginPath(); g.arc(32,32,32,0,7); g.fill();
-  return spriteCache[color]=s;
+  g.fillStyle=gr; g.fillRect(-52,-52,104,104);
+  return spriteCache[key]=s;
 }
 function sizeCanvases(){
   let W,H;
@@ -2300,6 +2319,54 @@ function exportPDF(){
 }
 $('#pdfBtn').addEventListener('click',exportPDF);
 
+// ---------- shot card: one-click shareable PNG of the current frame + settings ----------
+function exportShotCard(){
+  const CW=1600, CH=1200, c=document.createElement('canvas'); c.width=CW; c.height=CH;
+  const g=c.getContext('2d');
+  g.fillStyle='#000'; g.fillRect(0,0,CW,CH);
+  // the frame, fitted and framed
+  const pad=56, availW=CW-pad*2, availH=CH-470;
+  const sc=Math.min(availW/cv.width, availH/cv.height);
+  const iw=cv.width*sc, ih=cv.height*sc, ix=(CW-iw)/2, iy=pad;
+  g.save(); g.beginPath(); g.roundRect(ix,iy,iw,ih,18); g.clip();
+  g.drawImage(cv,ix,iy,iw,ih); g.restore();
+  g.strokeStyle='rgba(255,255,255,.16)'; g.lineWidth=2;
+  g.beginPath(); g.roundRect(ix,iy,iw,ih,18); g.stroke();
+  // AF-style corner brackets
+  g.strokeStyle='rgba(255,255,255,.55)'; g.lineWidth=3;
+  const bl=30, bo=14;
+  for(const [cx,cy,sx,sy] of [[ix-bo,iy-bo,1,1],[ix+iw+bo,iy-bo,-1,1],[ix-bo,iy+ih+bo,1,-1],[ix+iw+bo,iy+ih+bo,-1,-1]]){
+    g.beginPath(); g.moveTo(cx+sx*bl,cy); g.lineTo(cx,cy); g.lineTo(cx,cy+sy*bl); g.stroke();
+  }
+  // settings
+  const res=compute();
+  const ap=(state.mode==='cine'?'T':'ƒ/')+fmtN(state.N);
+  const dof=isFinite(res.Df)?(res.Df-res.Dn)/1000:Infinity;
+  g.textAlign='center';
+  g.fillStyle='#f0a93c'; g.font='600 46px ui-monospace,Menlo,monospace';
+  g.fillText(`${fmtN(state.f)}mm  ·  ${ap}  ·  ${anySensorById(state.cam).name}`, CW/2, iy+ih+86);
+  g.fillStyle='#9c9c9c'; g.font='400 29px ui-monospace,Menlo,monospace';
+  g.fillText(`focus ${fmtLen(state.s)}  ·  depth of field ${isFinite(dof)?fmtLen(dof):'∞'}  ·  background blur ${(res.bgFrac*100).toFixed(1)}% of frame`, CW/2, iy+ih+138);
+  // brand block
+  const mk=document.querySelector('.markImg');
+  if(mk&&mk.complete){
+    const mh=96, mw=mk.naturalWidth/mk.naturalHeight*mh;
+    const t=document.createElement('canvas'); t.width=mw; t.height=mh; const tg=t.getContext('2d');
+    tg.drawImage(mk,0,0,mw,mh); tg.globalCompositeOperation='source-in'; tg.fillStyle='#fff'; tg.fillRect(0,0,mw,mh);
+    g.drawImage(t,(CW-mw)/2,CH-236);
+  }
+  g.fillStyle='#f2f2f2'; g.font='600 30px -apple-system,system-ui,sans-serif';
+  g.fillText('F O C A L   L A B', CW/2, CH-96);
+  g.fillStyle='#6d6d6d'; g.font='500 19px -apple-system,system-ui,sans-serif';
+  g.fillText('S T U D I O   —   focallab-studio.netlify.app', CW/2, CH-60);
+  const a=document.createElement('a');
+  a.download=`focallab-shot-${fmtN(state.f)}mm-${fmtN(state.N)}.png`;
+  a.href=c.toDataURL('image/png'); a.click();
+  toast('Shot card downloaded');
+  return c; // for tests
+}
+$('#cardBtn').addEventListener('click',exportShotCard);
+
 // ---------- theme ----------
 function curTheme(){ return document.documentElement.classList.contains('light')?'light':'dark'; }
 function applyTheme(t,save){
@@ -2338,7 +2405,7 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change',e=>{
     photo:[
       {sel:null,title:'Photography basics',body:'This short walkthrough explains how a camera makes a photo look the way it does. Two things matter most: which parts of the picture are sharp, and how the scene is lit. We will go through them one step at a time. Each step changes a setting so you can watch what happens in the preview.',before:()=>{mode('photo');stagePeople([{t:'woman',x:0,d:2.5}]);set({f:85,N:1.8,s:2.5,b:18});scheme('none');}},
       {sel:'#apert',spot:'card',title:'Aperture: a wide opening',body:'Aperture is a hole inside the lens that lets light in. You can make it bigger or smaller. It is measured in f-numbers, like f/1.8 or f/11. This part is confusing at first: a <b>small number means a big hole</b>, and a big number means a small hole.<br><br>Right now it is set to f/1.8, a big opening. Notice that the background is blurry while the person stays sharp. When only a small part of the photo is in focus, we call that a <b>shallow depth of field</b>. It is a popular look for portraits because the person stands out. One trade-off: with the background this soft, you have to focus carefully on the subject, usually the eyes.',before:()=>set({N:1.8})},
-      {sel:'#apert',spot:'card',title:'Aperture: a small opening',body:'Now it is set to f/11, a small hole. Look at the background. It is much sharper than before. When most of the photo is in focus, from near to far, we call that a <b>deep depth of field</b>. This is the usual choice for landscapes, where you want everything sharp.<br><br>So the rule is simple: a smaller f-number blurs more of the photo, and a larger f-number keeps more of it sharp.<br><br><span style="color:var(--faint)">Note: in a real camera, a smaller opening also lets in less light, so you would adjust other settings to keep the photo bright. FocalLab leaves brightness out so you can focus on the look.</span>',before:()=>set({N:11})},
+      {sel:'#apert',spot:'card',title:'Aperture: a small opening',body:'Now it is set to f/11, a small hole. Look at the background. It is much sharper than before. When most of the photo is in focus, from near to far, we call that a <b>deep depth of field</b>. This is the usual choice for landscapes, where you want everything sharp.<br><br>So the rule is simple: a smaller f-number blurs more of the photo, and a larger f-number keeps more of it sharp.<br><br>Look at the little balls of light in the background: stopped down, they take on the <b>seven-sided shape of the aperture blades</b> inside the lens — wide open, they are perfectly round.<br><br><span style="color:var(--faint)">Note: in a real camera, a smaller opening also lets in less light, so you would adjust other settings to keep the photo bright. FocalLab leaves brightness out so you can focus on the look.</span>',before:()=>set({N:11})},
       {sel:'#focal',spot:'card',title:'Focal length: how zoomed in you are',body:'Focal length is the lens’s zoom, measured in millimeters (mm). A larger number is more zoomed in. The lens is set to 85mm now, which is a common choice for portraits because it is flattering and makes the background look closer and softer.<br><br>A small number like 24mm is zoomed out. It shows much more of the room and makes spaces feel deeper. The same person can look very different depending on the focal length you choose.',before:()=>set({N:2,f:85})},
       {sel:'#dist',spot:'card',title:'Distance changes the blur too',body:'The lens is not the only thing that controls blur. The space between your subject and the background matters as well. The farther the background sits behind the person, the blurrier it becomes.<br><br>Moving the camera closer to the person also softens the background and fills more of the frame with the subject. The lens, the subject’s distance, and the background’s distance all work together to make the look.<br><br>Tip: you can <b>click any person in the viewfinder</b> to focus on them, just like tapping to focus on a phone.'},
       {sel:'#lscheme',spot:'card',title:'Lighting: the three main lights',body:'Good lighting is what makes a photo look professional. A common setup uses three lights, and it is turned on now.<br><br>The <b>key light</b> is the main light. It is the brightest, and it creates most of the shadows on the face. The <b>fill light</b> is softer and sits on the other side. Its job is to make those shadows lighter so they are not too dark. The <b>rim light</b> (also called a back light) sits behind the person and adds a bright edge that separates them from the background.',before:()=>scheme('3point')},
