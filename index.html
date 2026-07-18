@@ -77,14 +77,13 @@ html.light .markImg{filter:none}
 .barTitle{font-size:12.5px;font-weight:600;letter-spacing:.28em;color:var(--text);white-space:nowrap}
 .barTitle em{font-style:normal;color:var(--faint)}
 #content{flex:1;padding:14px 18px 22px}
-#heroRow{display:grid;grid-template-columns:minmax(0,1fr) 212px;gap:12px;align-items:stretch}
-#readouts{display:grid;grid-template-rows:repeat(4,1fr);gap:12px;min-width:0}
-.ro{background:linear-gradient(180deg,var(--surf-hi),var(--surf-lo));border:1px solid var(--line);border-radius:14px;padding:12px 16px;display:flex;flex-direction:column;justify-content:center;gap:5px;min-height:74px;box-shadow:inset 0 1px 0 var(--edge-hi),var(--shadow)}
+/* mosaic: the frame is a big tile; every card dense-packs into the space around it */
+#mosaic{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));grid-auto-rows:8px;gap:12px;grid-auto-flow:dense}
+#mosaic>*{align-self:start;min-width:0}
+#mosaic>#topview,#mosaic>details.about{grid-column:1/-1}
+.ro{background:linear-gradient(180deg,var(--surf-hi),var(--surf-lo));border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:5px;min-height:74px;box-shadow:inset 0 1px 0 var(--edge-hi),var(--shadow)}
 .ro .lbl{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
 .ro .num{font-family:var(--mono);font-size:25px;color:var(--accent);white-space:nowrap}
-#modules{columns:3 300px;column-gap:12px;margin-top:12px}
-#modules .card{break-inside:avoid;margin:0 0 12px;display:inline-block;width:100%;box-sizing:border-box}
-#wideMods > *{margin-top:12px}
 #statusBar{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:9px 18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
 #statusBar a{color:var(--muted);text-decoration:none}
 #statusBar a:hover{color:var(--accent)}
@@ -200,7 +199,7 @@ canvas#vf{display:block;width:auto;height:auto;border-radius:8px}
 body.vf-s canvas#vf{max-width:max(28vw,240px);max-width:min(50cqw,max(28vw,240px));max-height:38vh}
 body.vf-m canvas#vf{max-width:max(42vw,300px);max-width:min(75cqw,max(42vw,300px));max-height:58vh}
 body.vf-l canvas#vf{max-width:max(54vw,340px);max-width:min(97cqw,max(54vw,340px));max-height:84vh}
-body.vf-f canvas#vf{max-width:97cqw;max-height:calc(100vh - 350px);min-height:240px}
+body.vf-f canvas#vf{max-width:calc(var(--heroW,900px) - 18px);max-height:calc(100vh - 360px);min-height:240px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stat{background:linear-gradient(180deg,var(--surf-hi),var(--surf-lo));border:1px solid var(--line);border-radius:11px;padding:9px 12px;box-shadow:inset 0 1px 0 var(--edge-hi)}
 .stat .lbl{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
@@ -266,10 +265,7 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
   .seg button{padding:5px 0}
 }
 @media (max-width:1150px){
-  #heroRow{grid-template-columns:1fr}
-  #readouts{grid-template-rows:none;grid-template-columns:repeat(4,1fr)}
-  .ro{min-height:0}
-  .ro .num{font-size:20px}
+  .ro .num{font-size:21px}
 }
 @media (max-width:900px){
   #sideNav{display:none}
@@ -279,7 +275,6 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
 @media (max-width:700px){
   /* phones: stacked layout — the frame just fills the width at every size */
   body.vf-s canvas#vf, body.vf-m canvas#vf, body.vf-l canvas#vf, body.vf-f canvas#vf{max-width:96cqw;max-height:70vh}
-  #readouts{grid-template-columns:repeat(2,1fr)}
   .stats{grid-template-columns:repeat(2,1fr)}
   .stat .num{white-space:normal}
 }
@@ -401,7 +396,7 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
 </header>
 
 <div id="content">
-  <div id="heroRow">
+  <div id="mosaic">
     <section id="stage">
     <div class="flow">
       <div class="frame">
@@ -420,14 +415,11 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
     
     
   </section>
-    <aside id="readouts">
-      <div class="ro"><div class="lbl">Focal length</div><div class="num" id="roF">—</div></div>
-      <div class="ro"><div class="lbl">Aperture</div><div class="num" id="roN">—</div></div>
-      <div class="ro"><div class="lbl">Focus</div><div class="num" id="roS">—</div></div>
-      <div class="ro"><div class="lbl">Depth of field</div><div class="num" id="roDof">—</div></div>
-    </aside>
-  </div>
-  <div id="modules">
+    <div class="ro"><div class="lbl">Focal length</div><div class="num" id="roF">—</div></div>
+    <div class="ro"><div class="lbl">Aperture</div><div class="num" id="roN">—</div></div>
+    <div class="ro"><div class="lbl">Focus</div><div class="num" id="roS">—</div></div>
+    <div class="ro"><div class="lbl">Depth of field</div><div class="num" id="roDof">—</div></div>
+
 
     <div class="card">
       <h2>Camera</h2>
@@ -555,8 +547,8 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
       <label class="tgl"><span>Viewfinder HUD</span><input type="checkbox" id="tglHud" checked><span class="sw"></span></label>
     </div>
   
-  </div>
-  <div id="wideMods">
+  
+
     <div class="card proOnly" id="topview">
       <h2>Top view — focus plane &amp; depth of field</h2>
       <div id="tvWrap"></div>
@@ -570,6 +562,7 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
         The preview is physically scaled: subject size comes from the real field of view at the focus distance, and every light is drawn at its computed blur-disc diameter. Video aspect ratios are treated as a sensor-height crop; T-stops are used as the f-number for depth purposes. Lighting uses inverse-square falloff (<code>I ∝ 1/d²</code>) — note how on-camera flash barely reaches a distant background: relative exposure falls off as <code>(s/x)²</code>. Lens character (cat-eye, swirl, onion rings) is not simulated.
       </div>
     </details>
+  
   </div>
 </div>
 
@@ -2521,9 +2514,38 @@ function setUI(u){
 }
 $('#uiSeg').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b||b.dataset.u===state.ui) return;
-  setUI(b.dataset.u); render();
+  setUI(b.dataset.u); render(); setTimeout(mosaicLayout,50);
 });
 setUI((()=>{try{return localStorage.getItem('focallab.ui')||'simple'}catch(e){return 'simple'}})());
+
+// ---------- mosaic layout: dense-pack every card around the hero frame ----------
+const mosaic=document.getElementById('mosaic');
+function mosaicLayout(){
+  if(!mosaic) return;
+  const gap=12, W=mosaic.clientWidth;
+  const cols=Math.max(1,Math.floor((W+gap)/(272+gap)));   // from width, not computed style — item spans create implicit tracks
+  const colW=(W-(cols-1)*gap)/cols;
+  const stage=document.getElementById('stage');
+  const span=cols>=3?cols-1:cols;                 // leave a column for cards when there is room
+  stage.style.gridColumnEnd='span '+span;
+  stage.style.setProperty('--heroW',(span*colW+(span-1)*gap)+'px');
+  requestAnimationFrame(()=>{
+    for(const el of mosaic.children){
+      if(getComputedStyle(el).display==='none') continue;
+      const h=el.getBoundingClientRect().height;
+      const rows=Math.max(1,Math.ceil((h+gap)/(8+gap)));
+      const v='span '+rows;
+      if(el.style.gridRowEnd!==v) el.style.gridRowEnd=v;
+    }
+  });
+}
+(function(){
+  if(!mosaic) return;
+  const ro=new ResizeObserver(()=>mosaicLayout());
+  ro.observe(mosaic);
+  for(const el of mosaic.children) ro.observe(el);
+  mosaicLayout();
+})();
 
 // ---------- sidebar section nav ----------
 document.querySelectorAll('#sideNav .sn').forEach(b=>{
