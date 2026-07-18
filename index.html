@@ -66,6 +66,11 @@ html.light .markImg{filter:none}
 #sideNav .sn svg{flex:none}
 #sideNav .sn:hover{color:var(--text);background:var(--panel)}
 #sideNav .sn.cur{background:var(--text);color:var(--bg)}
+.snFoot{margin-top:auto;padding:14px 4px 4px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.snFootLbl{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600;padding-left:8px}
+.snFoot select{font-size:12px;padding:8px 26px 8px 10px}
+.snFoot .snGo{width:100%;background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
+.snFoot .snGo:hover{opacity:.88}
 #mainCol{flex:1;min-width:0;display:flex;flex-direction:column}
 #appBar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line)}
 .barL{display:flex;align-items:center;gap:16px}
@@ -195,6 +200,7 @@ canvas#vf{display:block;width:auto;height:auto;border-radius:8px}
 body.vf-s canvas#vf{max-width:max(28vw,240px);max-width:min(50cqw,max(28vw,240px));max-height:38vh}
 body.vf-m canvas#vf{max-width:max(42vw,300px);max-width:min(75cqw,max(42vw,300px));max-height:58vh}
 body.vf-l canvas#vf{max-width:max(54vw,340px);max-width:min(97cqw,max(54vw,340px));max-height:84vh}
+body.vf-f canvas#vf{max-width:97cqw;max-height:calc(100vh - 350px);min-height:240px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stat{background:linear-gradient(180deg,var(--surf-hi),var(--surf-lo));border:1px solid var(--line);border-radius:11px;padding:9px 12px;box-shadow:inset 0 1px 0 var(--edge-hi)}
 .stat .lbl{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
@@ -272,7 +278,7 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
 }
 @media (max-width:700px){
   /* phones: stacked layout — the frame just fills the width at every size */
-  body.vf-s canvas#vf, body.vf-m canvas#vf, body.vf-l canvas#vf{max-width:96cqw;max-height:70vh}
+  body.vf-s canvas#vf, body.vf-m canvas#vf, body.vf-l canvas#vf, body.vf-f canvas#vf{max-width:96cqw;max-height:70vh}
   #readouts{grid-template-columns:repeat(2,1fr)}
   .stats{grid-template-columns:repeat(2,1fr)}
   .stat .num{white-space:normal}
@@ -366,7 +372,19 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
   <button class="sn" data-nav="#autoCard"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5l1.4 4.1L14 7l-4.6 1.4L8 12.5 6.6 8.4 2 7l4.6-1.4z"/><path d="M13 11.5l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5z"/></svg>Auto-set</button>
   <button class="sn" data-nav="#lscheme"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5a4.5 4.5 0 013 7.9c-.6.5-1 1.1-1 1.9v.2H6v-.2c0-.8-.4-1.4-1-1.9a4.5 4.5 0 013-7.9z"/><path d="M6.3 13.5h3.4M7 15h2"/></svg>Lighting</button>
   <button class="sn proOnly" data-nav="#topview"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2l6 3.2L8 8.4 2 5.2z"/><path d="M2 8.4L8 11.6l6-3.2M2 11.6L8 14.8l6-3.2"/></svg>Top view</button>
-  <button class="sn" data-nav="#shotsCard"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3.5 1.5h9l2 2v11h-11z"/><path d="M5.5 1.5v4h5v-4M5 15v-5h6v5"/></svg>Saves</button>
+  <button class="sn" data-nav="#shotsCard" data-last="1"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3.5 1.5h9l2 2v11h-11z"/><path d="M5.5 1.5v4h5v-4M5 15v-5h6v5"/></svg>Saves</button>
+  <div class="snFoot">
+    <div class="snFootLbl">Quick shot</div>
+    <select id="autoShot2" aria-label="Shot type">
+      <option value="auto">Auto (from my people)</option>
+      <option value="closeup">Close-up</option>
+      <option value="portrait">Portrait</option>
+      <option value="two">Two-shot</option>
+      <option value="group">Group</option>
+      <option value="wide">Wide establishing</option>
+    </select>
+    <button class="btn snGo" id="autoGo2">✦ Auto-set</button>
+  </div>
 </nav>
 <div id="mainCol">
 <header id="appBar">
@@ -388,9 +406,10 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
     <div class="flow">
       <div class="frame">
         <div class="seg mini" id="vfSeg" title="Viewfinder size">
-          <button data-v="s" title="Small — stats flow up beside the frame">S</button>
-          <button data-v="m" class="on">M</button>
-          <button data-v="l" title="Large — pushes the panels below the fold">L</button>
+          <button data-v="s" title="Small">S</button>
+          <button data-v="m" title="Medium">M</button>
+          <button data-v="l" title="Large">L</button>
+          <button data-v="f" class="on" title="Fit — fill the available space">⤢</button>
         </div>
         <canvas id="vf" width="1320" height="880"></canvas>
       </div>
@@ -2220,6 +2239,9 @@ function autoScene(type, vary){
   toast(`${f}mm ${state.mode==='cine'?'T':'ƒ/'}${fmtN(state.N)} · ${shot.label}`);
 }
 $('#autoGo').addEventListener('click',()=>autoScene($('#autoShot').value,false));
+$('#autoGo2').addEventListener('click',()=>{ $('#autoShot').value=$('#autoShot2').value; autoScene($('#autoShot2').value,false); });
+$('#autoShot').addEventListener('change',()=>{ const q=$('#autoShot2'); if(q) q.value=$('#autoShot').value; });
+$('#autoShot2').addEventListener('change',()=>{ $('#autoShot').value=$('#autoShot2').value; });
 $('#autoVary').addEventListener('click',()=>autoScene($('#autoShot').value,true));
 $('#autoUndo').addEventListener('click',()=>{
   if(!autoUndo) return;
@@ -2274,13 +2296,13 @@ $('#copyLink').addEventListener('click',async()=>{
 
 // ---------- viewfinder size ----------
 function applyVfSize(v,save){
-  document.body.classList.remove('vf-s','vf-m','vf-l');
+  document.body.classList.remove('vf-s','vf-m','vf-l','vf-f');
   document.body.classList.add('vf-'+v);
   document.querySelectorAll('#vfSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   if(save){ try{ localStorage.setItem('focallab.vfsize',v); }catch(e){} }
 }
 $('#vfSeg').addEventListener('click',e=>{const b=e.target.closest('button'); if(b) applyVfSize(b.dataset.v,true);});
-let vf0='m'; try{ vf0=localStorage.getItem('focallab.vfsize')||'m'; }catch(e){}
+let vf0='f'; try{ vf0=localStorage.getItem('focallab.vfsize')||'f'; }catch(e){}
 applyVfSize(vf0,false);
 
 // ---------- units ----------
