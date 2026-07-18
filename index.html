@@ -53,29 +53,17 @@ html.light{
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45}
-/* ---- shell: fixed sidebar + main column (instrument layout) ---- */
+/* ---- shell ---- */
 #shell{display:flex;min-height:100vh}
-#sideNav{width:212px;flex:none;border-right:1px solid var(--line);padding:20px 14px 16px;display:flex;flex-direction:column;gap:3px;position:sticky;top:0;height:100vh;overflow-y:auto}
-#sideNav .logo{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:2px 10px 22px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);margin:0}
-.markImg{display:block;height:58px;width:auto;filter:invert(1)}
+.logo{display:flex;align-items:center;gap:12px}
+.markImg{display:block;height:44px;width:auto;filter:invert(1)}
 html.light .markImg{filter:none}
-.wordmark{font-size:15px;font-weight:600;letter-spacing:.30em;color:var(--text);white-space:nowrap;line-height:1.2}
-.wordmark span{display:block;font-size:9.5px;font-weight:500;letter-spacing:.60em;color:var(--muted);margin-top:2px}
-#sideNav .sn{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;border-radius:9px;padding:11px 12px;cursor:pointer;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;text-align:left;transition:.15s}
-#sideNav .sn svg{flex:none}
-#sideNav .sn:hover{color:var(--text);background:var(--panel)}
-#sideNav .sn.cur{background:var(--text);color:var(--bg)}
-.snFoot{margin-top:auto;padding:14px 4px 4px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
-.snFootLbl{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600;padding-left:8px}
-.snFoot select{font-size:12px;padding:8px 26px 8px 10px}
-.snFoot .snGo{width:100%;background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
-.snFoot .snGo:hover{opacity:.88}
+.wordmark{font-size:14px;font-weight:600;letter-spacing:.28em;color:var(--text);white-space:nowrap;line-height:1.2}
+.wordmark span{display:block;font-size:9px;font-weight:500;letter-spacing:.56em;color:var(--muted);margin-top:1px}
 #mainCol{flex:1;min-width:0;display:flex;flex-direction:column}
 #appBar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line)}
 .barL{display:flex;align-items:center;gap:16px}
-.barTitle{font-size:12.5px;font-weight:600;letter-spacing:.28em;color:var(--text);white-space:nowrap}
-.barTitle em{font-style:normal;color:var(--faint)}
 #content{flex:1;padding:14px 18px 22px}
 /* mosaic: the frame is a big tile; every card dense-packs into the space around it */
 #mosaic{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));grid-auto-rows:8px;gap:12px;grid-auto-flow:dense}
@@ -267,11 +255,6 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
 @media (max-width:1150px){
   .ro .num{font-size:21px}
 }
-@media (max-width:900px){
-  #sideNav{display:none}
-  .barTitle::before{content:'';display:inline-block;width:17px;height:17px;margin-right:9px;vertical-align:-3px;background:var(--text);
-    -webkit-mask:url(fcl-mark.png) center/contain no-repeat;mask:url(fcl-mark.png) center/contain no-repeat}
-}
 @media (max-width:700px){
   /* phones: stacked layout — the frame just fills the width at every size */
   body.vf-s canvas#vf, body.vf-m canvas#vf, body.vf-l canvas#vf, body.vf-f canvas#vf{max-width:96cqw;max-height:70vh}
@@ -355,36 +338,15 @@ details.about code{font-family:var(--mono);color:var(--teal);font-size:12px}
 </div>
 
 <div id="shell">
-<nav id="sideNav" aria-label="Sections">
-  <div class="logo">
-    <h1 class="sr">FocalLab Studio — see your shot before you make it</h1>
-    <img class="markImg" src="fcl-mark.png" alt="" width="94" height="160">
-    <div class="wordmark">FOCAL LAB<span>STUDIO</span></div>
-  </div>
-  <button class="sn cur" data-nav="#modeSeg"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="4.5" width="13" height="9" rx="2"/><circle cx="8" cy="9" r="2.6"/><path d="M5.5 4.5l1-2h3l1 2"/></svg>Camera</button>
-  <button class="sn" data-nav="#focal"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.6"/><path d="M10.5 10.5L14 14"/></svg>Lens</button>
-  <button class="sn" data-nav="#scene"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="5.5" cy="5" r="2.2"/><path d="M1.5 13c.4-2.6 2-4 4-4s3.6 1.4 4 4"/><circle cx="11.5" cy="5.5" r="1.7"/><path d="M10.5 9.3c1.9.1 3.4 1.3 3.9 3.7"/></svg>Scene</button>
-  <button class="sn" data-nav="#autoCard"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5l1.4 4.1L14 7l-4.6 1.4L8 12.5 6.6 8.4 2 7l4.6-1.4z"/><path d="M13 11.5l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5z"/></svg>Auto-set</button>
-  <button class="sn" data-nav="#lscheme"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5a4.5 4.5 0 013 7.9c-.6.5-1 1.1-1 1.9v.2H6v-.2c0-.8-.4-1.4-1-1.9a4.5 4.5 0 013-7.9z"/><path d="M6.3 13.5h3.4M7 15h2"/></svg>Lighting</button>
-  <button class="sn proOnly" data-nav="#topview"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2l6 3.2L8 8.4 2 5.2z"/><path d="M2 8.4L8 11.6l6-3.2M2 11.6L8 14.8l6-3.2"/></svg>Top view</button>
-  <button class="sn" data-nav="#shotsCard" data-last="1"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3.5 1.5h9l2 2v11h-11z"/><path d="M5.5 1.5v4h5v-4M5 15v-5h6v5"/></svg>Saves</button>
-  <div class="snFoot">
-    <div class="snFootLbl">Quick shot</div>
-    <select id="autoShot2" aria-label="Shot type">
-      <option value="auto">Auto (from my people)</option>
-      <option value="closeup">Close-up</option>
-      <option value="portrait">Portrait</option>
-      <option value="two">Two-shot</option>
-      <option value="group">Group</option>
-      <option value="wide">Wide establishing</option>
-    </select>
-    <button class="btn snGo" id="autoGo2">✦ Auto-set</button>
-  </div>
-</nav>
+
 <div id="mainCol">
 <header id="appBar">
   <div class="barL">
-    <span class="barTitle">FOCAL LAB <em>/ STUDIO</em></span>
+    <div class="logo">
+      <h1 class="sr">FocalLab Studio — see your shot before you make it</h1>
+      <img class="markImg" src="fcl-mark.png" alt="" width="94" height="160">
+      <div class="wordmark">FOCAL LAB<span>STUDIO</span></div>
+    </div>
     <button class="btn" id="learnBtn" title="Take a guided tour or learn the basics">◉ Learn</button>
   </div>
   <div id="topbtns">
@@ -2232,9 +2194,6 @@ function autoScene(type, vary){
   toast(`${f}mm ${state.mode==='cine'?'T':'ƒ/'}${fmtN(state.N)} · ${shot.label}`);
 }
 $('#autoGo').addEventListener('click',()=>autoScene($('#autoShot').value,false));
-$('#autoGo2').addEventListener('click',()=>{ $('#autoShot').value=$('#autoShot2').value; autoScene($('#autoShot2').value,false); });
-$('#autoShot').addEventListener('change',()=>{ const q=$('#autoShot2'); if(q) q.value=$('#autoShot').value; });
-$('#autoShot2').addEventListener('change',()=>{ $('#autoShot').value=$('#autoShot2').value; });
 $('#autoVary').addEventListener('click',()=>autoScene($('#autoShot').value,true));
 $('#autoUndo').addEventListener('click',()=>{
   if(!autoUndo) return;
@@ -2545,43 +2504,6 @@ function mosaicLayout(){
   ro.observe(mosaic);
   for(const el of mosaic.children) ro.observe(el);
   mosaicLayout();
-})();
-
-// ---------- sidebar section nav ----------
-document.querySelectorAll('#sideNav .sn').forEach(b=>{
-  b.addEventListener('click',()=>{
-    const el=document.querySelector(b.dataset.nav); if(!el) return;
-    const card=el.closest('.card')||el;
-    card.classList.remove('min');
-    card.scrollIntoView({behavior:'smooth',block:'center'});
-    document.querySelectorAll('#sideNav .sn').forEach(x=>x.classList.toggle('cur',x===b));
-    spyHold=Date.now()+1200;                               // let the smooth scroll land without the spy fighting it
-    card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),1100);
-  });
-});
-// scroll-spy: the sidebar highlights the section nearest the top of the view
-let spyHold=0;
-(function(){
-  const map=[...document.querySelectorAll('#sideNav .sn')]
-    .map(b=>{const t=document.querySelector(b.dataset.nav); return {b,el:t?(t.closest('.card')||t):null};})
-    .filter(x=>x.el);
-  let t=0;
-  addEventListener('scroll',()=>{ if(t) return; t=setTimeout(()=>{t=0;
-    if(Date.now()<spyHold) return;
-    const atBottom=window.scrollY+window.innerHeight>=document.documentElement.scrollHeight-4;
-    let best=null,bd=1e9;
-    for(const m of map){
-      if(m.el.offsetParent===null) continue;               // hidden in Simple mode
-      const r=m.el.getBoundingClientRect();
-      if(atBottom){                                        // bottom of page: highlight the lowest visible section
-        if(r.top<window.innerHeight-40){ if(!best||r.top>bd){bd=r.top;best=m;} }
-      } else {
-        const d=Math.abs(r.top-120);
-        if(r.bottom>70 && d<bd){bd=d;best=m;}
-      }
-    }
-    if(best) document.querySelectorAll('#sideNav .sn').forEach(x=>x.classList.toggle('cur',x===best.b));
-  },140); },{passive:true});
 })();
 
 // ---------- collapsible panes ----------
